@@ -1,0 +1,19 @@
+{
+  "name": "statbooks-telegram-bot",
+  "version": "1.0.0",
+  "description": "StatBooks Telegram bot — kitob iqtiboslarini qidirish",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node --watch bot.js"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0",
+    "node-fetch": "^2.7.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

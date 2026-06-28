@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: statbooks-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        value: https://statabooks.netlify.app
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: GOOGLE_BOOKS_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: google/gemma-4-31b-it:free
+      - key: OPENROUTER_SEARCH_API_KEY
+        sync: false
+      - key: OPENROUTER_SEARCH_MODEL
+        value: google/gemma-4-31b-it:free
+      - key: OPENROUTER_CHAT_API_KEY
+        sync: false
+      - key: OPENROUTER_CHAT_MODEL
+        value: nvidia/nemotron-3-super-120b-a12b:free
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: StatBooks <onboarding@resend.dev>
+      - key: ALLOW_EMAIL_DEV_FALLBACK
+        value: false
+      - key: AUTH_CODE_TEST_INBOX
+        sync: false

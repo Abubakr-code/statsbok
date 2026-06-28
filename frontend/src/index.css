@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme colors as RGB triplets. Dark is the default; .light overrides. */
+:root {
+  --ink: 26 24 20;
+  --ink-800: 33 30 25;
+  --ink-700: 42 38 31;
+  --ink-600: 57 52 43;
+  --parchment: 245 240 232;
+  --parchment-dim: 201 193 178;
+  --parchment-faint: 138 130 112;
+  --amber: 232 169 74;
+  --amber-600: 214 149 58;
+  --amber-300: 242 199 126;
+}
+
+html.light {
+  --ink: 245 240 232;
+  --ink-800: 255 253 248;
+  --ink-700: 238 232 220;
+  --ink-600: 219 209 190;
+  --parchment: 42 38 32;
+  --parchment-dim: 92 85 74;
+  --parchment-faint: 140 131 112;
+  --amber: 193 133 35;
+  --amber-600: 168 113 26;
+  --amber-300: 224 173 102;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-ink text-parchment font-body antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+  ::selection {
+    @apply bg-amber/30 text-parchment;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5
+           font-medium transition-colors duration-200 disabled:opacity-50
+           disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-amber text-ink hover:bg-amber-600;
+  }
+  .btn-ghost {
+    @apply btn border border-ink-600 text-parchment hover:border-amber hover:text-amber;
+  }
+  .card {
+    @apply rounded-2xl border border-ink-600 bg-ink-800 p-5;
+  }
+  .input {
+    @apply w-full rounded-lg border border-ink-600 bg-ink-700 px-4 py-3
+           text-parchment placeholder-parchment-faint outline-none
+           focus:border-amber transition-colors;
+  }
+  .skeleton {
+    @apply rounded bg-ink-700;
+    background-image: linear-gradient(
+      90deg,
+      rgb(var(--ink-700)) 0px,
+      rgb(var(--ink-600)) 200px,
+      rgb(var(--ink-700)) 400px
+    );
+    background-size: 800px 100%;
+    @apply animate-shimmer;
+  }
+  /* Render emoji as bright, slightly larger iOS-style stickers everywhere. */
+  .ai-emoji {
+    font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji',
+      'Twemoji Mozilla', 'EmojiOne Color', sans-serif;
+    font-size: 1.25em;
+    line-height: 1;
+    vertical-align: -0.12em;
+    display: inline-block;
+  }
+}

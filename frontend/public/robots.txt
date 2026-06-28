@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /widget/
+
+Sitemap: https://statbooks.uz/sitemap.xml

@@ -1,0 +1,19 @@
+{
+  "_comment": "MongoDB Atlas Search index for the 'quotes' collection. Create via Atlas UI > Search > Create Index > JSON Editor. Name the index 'quotes_search' to match searchService.js.",
+  "name": "quotes_search",
+  "mappings": {
+    "dynamic": false,
+    "fields": {
+      "text": {
+        "type": "string",
+        "analyzer": "lucene.english",
+        "searchAnalyzer": "lucene.english"
+      },
+      "textNormalized": {
+        "type": "string",
+        "analyzer": "lucene.standard",
+        "searchAnalyzer": "lucene.standard"
+      }
+    }
+  }
+}
