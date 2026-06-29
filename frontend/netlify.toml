@@ -1,9 +1,22 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
 [build.environment]
   NODE_VERSION = "22"
-  VITE_API_URL = "https://statbooks.onrender.com/api"
 
+# Proxy API calls to the Render backend. Keeping the API same-origin (served
+# under the Netlify domain) avoids CORS entirely and lets the httpOnly auth
+# cookie work reliably. The frontend calls "/api/*" (relative) by default.
 [[redirects]]
   from = "/api/*"
-  to = "https://statbooks.onrender.com/api/:splat"
+  to = "https://statbooks-backend.onrender.com/api/:splat"
   status = 200
   force = true
+
+# SPA fallback — every other path serves index.html so client-side routing
+# (React Router) works on direct visits and page refreshes.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
