@@ -52,3 +52,27 @@ services:
         sync: false
       - key: GMAIL_APP_PASSWORD
         sync: false
+
+  # Telegram bot — runs in webhook mode so it works on Render's free plan
+  # (Telegram traffic wakes the service; no always-on background worker needed).
+  - type: web
+    name: statbooks-bot
+    runtime: node
+    rootDir: telegram-bot
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: BOT_MODE
+        value: webhook
+      - key: BACKEND_URL
+        value: https://statbooks-backend.onrender.com
+      - key: FRONTEND_URL
+        value: https://statsbooks.netlify.app
+      - key: OPENROUTER_CHAT_API_KEY
+        sync: false
+      - key: OPENROUTER_CHAT_MODEL
+        value: nvidia/nemotron-3-super-120b-a12b:free

@@ -45,10 +45,12 @@ if (!TOKEN) {
 let bot;
 if (MODE === 'webhook') {
   bot = new TelegramBot(TOKEN);
-  const port = Number(process.env.WEBHOOK_PORT) || 3001;
-  const webhookUrl = process.env.WEBHOOK_URL;
-  if (!webhookUrl) { console.error('WEBHOOK_URL kerak'); process.exit(1); }
-  bot.setWebHook(`${webhookUrl}/bot${TOKEN}`);
+  // On Render the platform supplies PORT and RENDER_EXTERNAL_URL automatically,
+  // so the bot works with no manual WEBHOOK_URL/WEBHOOK_PORT configuration.
+  const port = Number(process.env.PORT || process.env.WEBHOOK_PORT) || 3001;
+  const webhookUrl = process.env.WEBHOOK_URL || process.env.RENDER_EXTERNAL_URL;
+  if (!webhookUrl) { console.error('WEBHOOK_URL yoki RENDER_EXTERNAL_URL kerak'); process.exit(1); }
+  bot.setWebHook(`${webhookUrl.replace(/\/$/, '')}/bot${TOKEN}`);
   const http = require('http');
   http.createServer((req, res) => {
     if (req.method === 'POST' && req.url === `/bot${TOKEN}`) {
@@ -59,7 +61,8 @@ if (MODE === 'webhook') {
         res.writeHead(200).end('ok');
       });
     } else {
-      res.writeHead(404).end();
+      // Any other path (incl. the platform health probe) gets a simple 200.
+      res.writeHead(200).end('StatBooks bot ishlamoqda');
     }
   }).listen(port, () => console.log(`Webhook port ${port} da ishlamoqda`));
 } else {
