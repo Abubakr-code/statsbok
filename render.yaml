@@ -86,3 +86,9 @@ services:
         sync: false
       - key: OPENROUTER_CHAT_MODEL
         value: nvidia/nemotron-3-super-120b-a12b:free
+      # Force channel subscription before using the bot. The bot must be an
+      # admin of CHANNEL_USERNAME for the check to actually enforce.
+      - key: REQUIRE_CHANNEL
+        value: "true"
+      - key: CHANNEL_USERNAME
+        value: "@statsbooks"

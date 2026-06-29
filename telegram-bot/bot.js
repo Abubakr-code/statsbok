@@ -110,10 +110,25 @@ const MSGS = {
     more:           (n, url) => `🔎 Jami <b>${n}</b> ta natija. <a href="${url}">Barchasini saytda ko\'rish</a>`,
     allShown:       '✅ Barcha natijalar ko\'rsatildi.',
     saves:          (n) => `❤️ ${n} marta saqlangan`,
-    helpText:       `📚 <b>StatBooks Bot — Yordam</b>\n\n<b>Komandalar:</b>\n/start — Bosh sahifa\n/help — Ushbu yordam\n/top — Haftalik top iqtiboslar\n/lang — Tilni o\'zgartirish\n/login — Saytga kirish\n/premium — Premium haqida\n/subscribe — Kunlik iqtibos obunasi\n/unsubscribe — Obunani bekor qilish\n/ai — AI suhbat rejimi\n\nYoki shunchaki iqtibos yozing! 📖`,
+    helpText:       `📚 <b>StatBooks Bot — Yordam</b>\n\n<b>Komandalar:</b>\n/start — Bosh sahifa\n/help — Ushbu yordam\n/mood — Kayfiyat bo\'yicha tavsiya\n/top — Haftalik top iqtiboslar\n/lang — Tilni o\'zgartirish\n/login — Saytga kirish\n/premium — Premium haqida\n/subscribe — Kunlik iqtibos obunasi\n/unsubscribe — Obunani bekor qilish\n/ai — AI suhbat rejimi\n\nYoki shunchaki iqtibos yozing! 📖`,
     savedMsg:       `🔖 <b>Saqlangan iqtiboslar</b>\n\nSaqlangan iqtiboslaringizni saytda ko\'ring:`,
     savedBtn:       '🔖 Saqlangan iqtiboslar',
     dailyTitle:     '📖 <b>Bugungi iqtibos</b>',
+    btnImage:       '🖼 Rasm',
+    btnContext:     '💡 AI izoh',
+    btnSimilar:     '🔁 O‘xshash',
+    btnBuy:         '🛒 Sotib olish',
+    btnApp:         '📱 Ilovani ochish',
+    moodBtn:        '🎭 Kayfiyat',
+    ctxLoading:     '💡 Tahlil qilinmoqda...',
+    imgError:       '😔 Rasm yaratib bo‘lmadi.',
+    moodTitle:      '🎭 <b>Kayfiyatni tanlang — mos kitoblarni topaman:</b>',
+    moodSad:        '😔 G‘amgin',
+    moodInspire:    '✨ Ilhom',
+    moodLove:       '❤️ Sevgi',
+    moodMotivation: '🔥 Motivatsiya',
+    moodWisdom:     '🦉 Hikmat',
+    moodAdventure:  '🗺 Sarguzasht',
   },
   ru: {
     langSelect:     '🌐 <b>Выберите язык:</b>',
@@ -153,10 +168,25 @@ const MSGS = {
     more:           (n, url) => `🔎 Всего <b>${n}</b> результатов. <a href="${url}">Смотреть все на сайте</a>`,
     allShown:       '✅ Все результаты показаны.',
     saves:          (n) => `❤️ ${n} сохранений`,
-    helpText:       `📚 <b>StatBooks Bot — Помощь</b>\n\n<b>Команды:</b>\n/start — Главная\n/help — Помощь\n/top — Топ цитаты\n/lang — Сменить язык\n/login — Войти на сайт\n/premium — О Premium\n/subscribe — Ежедневная цитата\n/unsubscribe — Отменить подписку\n/ai — Режим AI\n\nИли просто напишите цитату! 📖`,
+    helpText:       `📚 <b>StatBooks Bot — Помощь</b>\n\n<b>Команды:</b>\n/start — Главная\n/help — Помощь\n/mood — Подбор по настроению\n/top — Топ цитаты\n/lang — Сменить язык\n/login — Войти на сайт\n/premium — О Premium\n/subscribe — Ежедневная цитата\n/unsubscribe — Отменить подписку\n/ai — Режим AI\n\nИли просто напишите цитату! 📖`,
     savedMsg:       '🔖 <b>Сохранённые цитаты</b>\n\nПросматривайте сохранённые цитаты на сайте:',
     savedBtn:       '🔖 Сохранённые цитаты',
     dailyTitle:     '📖 <b>Цитата дня</b>',
+    btnImage:       '🖼 Картинка',
+    btnContext:     '💡 AI разбор',
+    btnSimilar:     '🔁 Похожие',
+    btnBuy:         '🛒 Купить',
+    btnApp:         '📱 Открыть приложение',
+    moodBtn:        '🎭 Настроение',
+    ctxLoading:     '💡 Анализирую...',
+    imgError:       '😔 Не удалось создать картинку.',
+    moodTitle:      '🎭 <b>Выберите настроение — подберу книги:</b>',
+    moodSad:        '😔 Грусть',
+    moodInspire:    '✨ Вдохновение',
+    moodLove:       '❤️ Любовь',
+    moodMotivation: '🔥 Мотивация',
+    moodWisdom:     '🦉 Мудрость',
+    moodAdventure:  '🗺 Приключения',
   },
   en: {
     langSelect:     '🌐 <b>Select language:</b>',
@@ -196,11 +226,33 @@ const MSGS = {
     more:           (n, url) => `🔎 <b>${n}</b> results total. <a href="${url}">View all on site</a>`,
     allShown:       '✅ All results shown.',
     saves:          (n) => `❤️ ${n} saves`,
-    helpText:       `📚 <b>StatBooks Bot — Help</b>\n\n<b>Commands:</b>\n/start — Home\n/help — Help\n/top — Top quotes\n/lang — Change language\n/login — Login to site\n/premium — About Premium\n/subscribe — Daily quote\n/unsubscribe — Cancel subscription\n/ai — AI chat mode\n\nOr just type a quote! 📖`,
+    helpText:       `📚 <b>StatBooks Bot — Help</b>\n\n<b>Commands:</b>\n/start — Home\n/help — Help\n/mood — Mood-based picks\n/top — Top quotes\n/lang — Change language\n/login — Login to site\n/premium — About Premium\n/subscribe — Daily quote\n/unsubscribe — Cancel subscription\n/ai — AI chat mode\n\nOr just type a quote! 📖`,
     savedMsg:       '🔖 <b>Saved Quotes</b>\n\nView your saved quotes on the site:',
     savedBtn:       '🔖 Saved Quotes',
     dailyTitle:     '📖 <b>Daily Quote</b>',
+    btnImage:       '🖼 Image',
+    btnContext:     '💡 AI insight',
+    btnSimilar:     '🔁 Similar',
+    btnBuy:         '🛒 Buy',
+    btnApp:         '📱 Open app',
+    moodBtn:        '🎭 Mood',
+    ctxLoading:     '💡 Analyzing...',
+    imgError:       '😔 Could not create image.',
+    moodTitle:      '🎭 <b>Pick a mood — I\'ll find matching books:</b>',
+    moodSad:        '😔 Sad',
+    moodInspire:    '✨ Inspire',
+    moodLove:       '❤️ Love',
+    moodMotivation: '🔥 Motivation',
+    moodWisdom:     '🦉 Wisdom',
+    moodAdventure:  '🗺 Adventure',
   }
+};
+
+// Mood → themed search query, per language. Reuses the normal book search.
+const MOOD_QUERIES = {
+  uz: { sad: 'g‘amgin hayotiy kitoblar', inspire: 'ilhomlantiruvchi kitoblar', love: 'sevgi haqida romanlar', motivation: 'motivatsiya va muvaffaqiyat kitoblari', wisdom: 'hikmat va falsafa kitoblari', adventure: 'sarguzasht romanlari' },
+  ru: { sad: 'грустные жизненные книги', inspire: 'вдохновляющие книги', love: 'романы о любви', motivation: 'книги о мотивации и успехе', wisdom: 'книги мудрости и философии', adventure: 'приключенческие романы' },
+  en: { sad: 'sad melancholic novels', inspire: 'inspiring books', love: 'romance novels', motivation: 'motivation and success books', wisdom: 'wisdom and philosophy books', adventure: 'adventure novels' }
 };
 
 function t(lang, key, ...args) {
@@ -330,8 +382,19 @@ async function isMember(userId) {
     const m = await bot.getChatMember(CHANNEL, userId);
     return ['member', 'administrator', 'creator', 'restricted'].includes(m.status);
   } catch {
-    return true; // Can't check → allow
+    return true; // Can't check (bot not admin / channel missing) → allow
   }
+}
+
+// Gate that enforces channel membership. Returns true if allowed, otherwise
+// prompts the user to join and returns false. No-op when REQUIRE_CHANNEL is off.
+async function passChannelGate(chatId, userId, lang) {
+  if (await isMember(userId)) return true;
+  await bot.sendMessage(chatId, t(lang, 'channelReq'), {
+    parse_mode: 'HTML',
+    reply_markup: channelKeyboard(lang)
+  }).catch(() => {});
+  return false;
 }
 
 // ── Result formatting ─────────────────────────────────────────────────────────
@@ -350,17 +413,62 @@ function formatResult(item, idx, lang) {
   return msg;
 }
 
-function resultKeyboard(item, lang) {
+function isObjectId(id) {
+  return /^[a-f0-9]{24}$/i.test(String(id || ''));
+}
+
+// Rich action buttons under each result. `idx` is the 0-based position in
+// state.lastResults so callbacks (AI insight, similar) can look the item up.
+function resultKeyboard(item, lang, idx) {
+  const book = item.book || {};
   const quoteText = (item.text || '').slice(0, 80);
-  const searchQ = encodeURIComponent(quoteText);
-  const siteUrl = `${FRONTEND}/search?q=${searchQ}`;
+  const siteUrl = `${FRONTEND}/search?q=${encodeURIComponent(quoteText)}`;
   const shareText = (item.text || '').slice(0, 60);
+
+  const rows = [];
+  const row1 = [];
+  // Image card only for real DB quotes (og-image needs a quote ObjectId).
+  if (isObjectId(item.quoteId)) {
+    row1.push({ text: t(lang, 'btnImage'), callback_data: `img:${item.quoteId}` });
+  }
+  row1.push({ text: t(lang, 'btnContext'), callback_data: `ctx:${idx}` });
+  if (book.affiliateLink && book.id) {
+    const q = isObjectId(item.quoteId) ? `&quoteId=${item.quoteId}` : '';
+    row1.push({ text: t(lang, 'btnBuy'), url: `${BACKEND}/api/affiliate/go?bookId=${book.id}${q}` });
+  }
+  rows.push(row1);
+
+  rows.push([
+    { text: t(lang, 'btnSimilar'), callback_data: `sim:${idx}` },
+    { text: t(lang, 'btnShare'), switch_inline_query: shareText }
+  ]);
+  rows.push([{ text: t(lang, 'btnSite'), url: siteUrl }]);
+  return { inline_keyboard: rows };
+}
+
+// Mood picker — each button runs a themed search.
+function moodKeyboard(lang) {
   return {
-    inline_keyboard: [[
-      { text: t(lang, 'btnPreview'), url: siteUrl },
-      { text: t(lang, 'btnShare'), switch_inline_query: shareText }
-    ]]
+    inline_keyboard: [
+      [{ text: t(lang, 'moodSad'), callback_data: 'mood:sad' }, { text: t(lang, 'moodInspire'), callback_data: 'mood:inspire' }],
+      [{ text: t(lang, 'moodLove'), callback_data: 'mood:love' }, { text: t(lang, 'moodMotivation'), callback_data: 'mood:motivation' }],
+      [{ text: t(lang, 'moodWisdom'), callback_data: 'mood:wisdom' }, { text: t(lang, 'moodAdventure'), callback_data: 'mood:adventure' }]
+    ]
   };
+}
+
+// Welcome keyboard: language row + (Mini App in private chats) + mood shortcut.
+function welcomeKeyboard(lang, isPrivate) {
+  const rows = [[
+    { text: '🇺🇿 O\'zbek', callback_data: 'lang:uz' },
+    { text: '🇷🇺 Русский', callback_data: 'lang:ru' },
+    { text: '🇬🇧 English', callback_data: 'lang:en' }
+  ]];
+  const row2 = [{ text: t(lang, 'moodBtn'), callback_data: 'mood_open' }];
+  // web_app buttons are only allowed in private chats.
+  if (isPrivate) row2.unshift({ text: t(lang, 'btnApp'), web_app: { url: FRONTEND } });
+  rows.push(row2);
+  return { inline_keyboard: rows };
 }
 
 function paginationKeyboard(state) {
@@ -392,7 +500,7 @@ async function sendResultsPage(chatId, state, deleteLoadingId) {
     const item = slice[i];
     const idx = start + i + 1;
     const caption = formatResult(item, idx, lang);
-    const keyboard = resultKeyboard(item, lang);
+    const keyboard = resultKeyboard(item, lang, start + i);
     const coverUrl = item.book && item.book.coverImage;
 
     if (coverUrl && isHttpUrl(coverUrl)) {
@@ -469,6 +577,45 @@ async function callAI(chatId) {
   throw new Error(lastErr);
 }
 
+// One-shot AI call (no history) — used for the "AI insight" button.
+async function aiOneShot(userContent) {
+  if (!OPENROUTER_CHAT_API_KEY) throw new Error('OPENROUTER_CHAT_API_KEY yo\'q');
+  const messages = [
+    { role: 'system', content: AI_SYSTEM_PROMPT },
+    { role: 'user', content: userContent }
+  ];
+  let lastErr = 'AI ishlamadi';
+  for (const model of AI_FREE_MODELS) {
+    try {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 20000);
+      const res = await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${OPENROUTER_CHAT_API_KEY}`,
+          'HTTP-Referer': FRONTEND,
+          'X-Title': 'StatBooks'
+        },
+        body: JSON.stringify({ model, max_tokens: 500, messages }),
+        signal: controller.signal
+      });
+      clearTimeout(tid);
+      if (res.ok) {
+        const data = await res.json();
+        const reply = data.choices?.[0]?.message?.content || '';
+        if (reply) return reply;
+        lastErr = 'Bo\'sh javob';
+      } else {
+        lastErr = `${res.status}`;
+      }
+    } catch (err) {
+      lastErr = err.message;
+    }
+  }
+  throw new Error(lastErr);
+}
+
 // ── Language selection keyboard ───────────────────────────────────────────────
 const LANG_KEYBOARD = {
   inline_keyboard: [[
@@ -522,10 +669,25 @@ bot.onText(/\/start/, async (msg) => {
   try {
     await bot.sendMessage(chatId, t(state.lang, 'welcome', name), {
       parse_mode: 'HTML',
-      reply_markup: LANG_KEYBOARD
+      reply_markup: welcomeKeyboard(state.lang, msg.chat.type === 'private')
     });
   } catch (err) {
     console.error('/start error:', err.message);
+  }
+});
+
+// ── /mood ─────────────────────────────────────────────────────────────────────
+bot.onText(/\/mood/, async (msg) => {
+  const chatId = msg.chat.id;
+  const { lang } = getState(chatId);
+  if (!(await passChannelGate(chatId, msg.from.id, lang))) return;
+  try {
+    await bot.sendMessage(chatId, t(lang, 'moodTitle'), {
+      parse_mode: 'HTML',
+      reply_markup: moodKeyboard(lang)
+    });
+  } catch (err) {
+    console.error('/mood error:', err.message);
   }
 });
 
@@ -810,7 +972,7 @@ bot.on('callback_query', async (query) => {
       const name = esc(query.from.first_name || 'Do\'st');
       await bot.sendMessage(chatId, t(lang, 'welcome', name), {
         parse_mode: 'HTML',
-        reply_markup: LANG_KEYBOARD
+        reply_markup: welcomeKeyboard(lang, query.message.chat.type === 'private')
       }).catch(() => {});
     } else {
       await bot.sendMessage(chatId, t(lang, 'channelReq'), {
@@ -824,6 +986,68 @@ bot.on('callback_query', async (query) => {
   // New search shortcut
   if (data === 'new_search') {
     await bot.sendMessage(chatId, t(lang, 'howto')).catch(() => {});
+    return;
+  }
+
+  // Open mood picker
+  if (data === 'mood_open') {
+    await bot.sendMessage(chatId, t(lang, 'moodTitle'), {
+      parse_mode: 'HTML',
+      reply_markup: moodKeyboard(lang)
+    }).catch(() => {});
+    return;
+  }
+
+  // Mood → themed search
+  if (data.startsWith('mood:')) {
+    const key = data.split(':')[1];
+    const q = (MOOD_QUERIES[lang] || MOOD_QUERIES.uz)[key];
+    if (q) await runSearch(chatId, state, q);
+    return;
+  }
+
+  // Quote image card
+  if (data.startsWith('img:')) {
+    const id = data.slice(4);
+    if (!isObjectId(id)) return;
+    await bot.sendChatAction(chatId, 'upload_photo').catch(() => {});
+    await bot.sendPhoto(chatId, `${BACKEND}/api/share/og-image/${id}`, {})
+      .catch(() => bot.sendMessage(chatId, t(lang, 'imgError')).catch(() => {}));
+    return;
+  }
+
+  // AI insight for a specific result
+  if (data.startsWith('ctx:')) {
+    const item = state.lastResults[Number(data.slice(4))];
+    if (!item) return;
+    const book = item.book || {};
+    const loadMsg = await bot.sendMessage(chatId, t(lang, 'ctxLoading'));
+    const langLine = lang === 'ru' ? 'Ответь на русском.' : lang === 'en' ? 'Answer in English.' : 'O‘zbek tilida javob ber.';
+    const prompt =
+      `Quyidagi kitob/iqtibos haqida qisqa (3-4 jumla), qiziqarli izoh ber. ` +
+      `Kitob: "${book.title || ''}"${book.author ? ` — ${book.author}` : ''}. ` +
+      `Iqtibos: "${(item.text || '').slice(0, 500)}". ${langLine}`;
+    try {
+      const reply = await aiOneShot(prompt);
+      await bot.deleteMessage(chatId, loadMsg.message_id).catch(() => {});
+      await bot.sendMessage(chatId, reply, { parse_mode: 'HTML' }).catch(() =>
+        bot.sendMessage(chatId, reply).catch(() => {})
+      );
+    } catch (err) {
+      await bot.editMessageText(t(lang, 'aiError'), {
+        chat_id: chatId, message_id: loadMsg.message_id
+      }).catch(() => {});
+    }
+    return;
+  }
+
+  // Similar books — search by the same author (or title)
+  if (data.startsWith('sim:')) {
+    const item = state.lastResults[Number(data.slice(4))];
+    if (!item) return;
+    const book = item.book || {};
+    const q = book.author || book.title || '';
+    if (q) await runSearch(chatId, state, q);
     return;
   }
 });
@@ -851,6 +1075,9 @@ bot.on('message', async (msg) => {
     await bot.sendMessage(chatId, t(lang, 'rateLimit'));
     return;
   }
+
+  // Force channel subscription (no-op unless REQUIRE_CHANNEL=true).
+  if (!(await passChannelGate(chatId, msg.from.id, lang))) return;
 
   // ── AI mode ────────────────────────────────────────────────────────────────
   if (state.aiMode) {
@@ -970,6 +1197,32 @@ bot.on('polling_error', (err) => {
 });
 
 bot.on('error', (err) => console.error('Bot error:', err.message));
+
+// ── Startup: Mini App menu button + command menu ───────────────────────────────
+// The menu button (left of the input box) opens the StatBooks web app right
+// inside Telegram. Runs once on launch; failures are non-fatal.
+(async function setupBot() {
+  if (/^https:\/\//.test(FRONTEND)) {
+    try {
+      await bot.setChatMenuButton({
+        menu_button: { type: 'web_app', text: 'StatBooks', web_app: { url: FRONTEND } }
+      });
+    } catch (e) { console.error('setChatMenuButton:', e.message); }
+  }
+  try {
+    await bot.setMyCommands([
+      { command: 'start', description: 'Bosh sahifa / Home' },
+      { command: 'mood', description: 'Kayfiyat bo\'yicha tavsiya / Mood picks' },
+      { command: 'top', description: 'Haftalik top / Weekly top' },
+      { command: 'ai', description: 'AI suhbat / AI chat' },
+      { command: 'saved', description: 'Saqlanganlar / Saved' },
+      { command: 'premium', description: 'Premium' },
+      { command: 'login', description: 'Saytga kirish / Login' },
+      { command: 'lang', description: 'Til / Language' },
+      { command: 'help', description: 'Yordam / Help' }
+    ]);
+  } catch (e) { console.error('setMyCommands:', e.message); }
+})();
 
 process.on('unhandledRejection', (reason) => {
   console.error('Unhandled rejection:', reason instanceof Error ? reason.message : reason);
