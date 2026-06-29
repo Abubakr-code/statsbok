@@ -47,6 +47,10 @@ services:
         value: false
       - key: AUTH_CODE_TEST_INBOX
         sync: false
+      # Demo mode: skip the email verification code (no working email provider
+      # yet). Set to false once Mailjet/Brevo/SMTP2GO or a domain is configured.
+      - key: SKIP_EMAIL_VERIFICATION
+        value: "true"
       # Gmail SMTP — used only for local/dev (Render blocks outbound SMTP).
       - key: GMAIL_USER
         sync: false

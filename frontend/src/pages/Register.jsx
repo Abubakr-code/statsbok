@@ -28,6 +28,11 @@ export default function Register() {
     };
     try {
       const data = await register(payload);
+      // Demo mode: the backend signed us in directly (no email code) — go home.
+      if (data && data.user) {
+        navigate('/', { replace: true });
+        return;
+      }
       navigate('/verify', {
         state: {
           channel: 'email',
@@ -45,7 +50,8 @@ export default function Register() {
 
   return (
     <div className="mx-auto flex max-w-md flex-col px-4 py-16">
-      <h1 className="mb-8 text-center text-3xl text-parchment">{t('auth.register.title')}</h1>
+      <h1 className="mb-2 text-center text-3xl text-parchment">{t('auth.register.title')}</h1>
+      <p className="mb-8 text-center text-xs text-parchment-faint">{t('auth.register.demoNote')}</p>
 
       <form onSubmit={handleSubmit} className="card space-y-4">
         <div>

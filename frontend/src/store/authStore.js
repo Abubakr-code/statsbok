@@ -39,12 +39,18 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Returns { needsVerification, email, dev }. No user/session until verified.
+  // Returns { needsVerification, email, dev } in the normal email-code flow, or
+  // { user, verified } in demo mode (no code) — in which case we're already
+  // signed in via the cookie, so cache the user immediately.
   register: async (payload) => {
     set({ loading: true, error: null });
     try {
       const data = await authService.register(payload);
-      set({ loading: false });
+      if (data && data.user) {
+        set({ user: data.user, loading: false });
+      } else {
+        set({ loading: false });
+      }
       return data;
     } catch (err) {
       set({ loading: false, error: err.message });

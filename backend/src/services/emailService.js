@@ -240,6 +240,49 @@ async function sendViaBrevo(email, payload) {
   }
 }
 
+// ─── Mailjet (HTTP API) ────────────────────────────────────────────────────
+// Mailjet's Send API v3.1 works over HTTPS (fine on SMTP-blocked hosts like
+// Render free). Free tier: 6000 emails/month (200/day). Auth uses an API Key +
+// Secret Key pair (HTTP Basic). Setup: verify a sender at mailjet.com, then set
+// MJ_APIKEY_PUBLIC, MJ_APIKEY_PRIVATE and MJ_SENDER (the verified sender email).
+const MAILJET_URL = 'https://api.mailjet.com/v3.1/send';
+
+async function sendViaMailjet(email, payload) {
+  const pub = process.env.MJ_APIKEY_PUBLIC;
+  const priv = process.env.MJ_APIKEY_PRIVATE;
+  if (!pub || !priv) return false;
+  const senderEmail = process.env.MJ_SENDER || process.env.BREVO_SENDER || process.env.GMAIL_USER;
+  if (!senderEmail) return false;
+  try {
+    const auth = Buffer.from(`${pub}:${priv}`).toString('base64');
+    const res = await fetch(MAILJET_URL, {
+      method: 'POST',
+      headers: {
+        authorization: `Basic ${auth}`,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        Messages: [
+          {
+            From: { Email: senderEmail, Name: 'StatBooks' },
+            To: [{ Email: email }],
+            Subject: payload.subject,
+            TextPart: payload.text,
+            HTMLPart: payload.html
+          }
+        ]
+      })
+    });
+    if (res.ok) return true;
+    const detail = await res.text().catch(() => '');
+    console.warn(`[email] Mailjet send failed (${res.status}): ${detail.slice(0, 200)}`);
+    return false;
+  } catch (err) {
+    console.warn('[email] Mailjet request failed:', err.message);
+    return false;
+  }
+}
+
 async function postToResend(apiKey, from, email, payload) {
   return fetch(RESEND_URL, {
     method: 'POST',
@@ -282,7 +325,14 @@ async function sendVerificationCode(email, code, lang = 'uz') {
   const payload = { subject, html, text };
 
   // Prefer HTTP email providers that work on SMTP-blocked hosts (Render free).
-  // Order: Brevo (HTTP, sends to anyone) → Gmail SMTP (local/dev) → Resend.
+  // Order: Mailjet → Brevo (both HTTP, send to anyone) → Gmail SMTP (dev) → Resend.
+  if (process.env.MJ_APIKEY_PUBLIC) {
+    const mjOk = await sendViaMailjet(recipient, payload);
+    if (mjOk) {
+      console.log(`[email] Mailjet sent verification to ${recipient}`);
+      return { delivered: true, via: 'mailjet', redirected, deliveredTo: recipient };
+    }
+  }
   if (process.env.BREVO_API_KEY) {
     const brevoOk = await sendViaBrevo(recipient, payload);
     if (brevoOk) {
@@ -357,6 +407,10 @@ async function sendLoginAlertEmail(email, meta = {}, lang = 'uz') {
   const payload = { subject, html, text };
 
   // Prefer HTTP providers first (see sendVerificationCode for rationale).
+  if (process.env.MJ_APIKEY_PUBLIC) {
+    const mjOk = await sendViaMailjet(email, payload);
+    if (mjOk) return { delivered: true, via: 'mailjet' };
+  }
   if (process.env.BREVO_API_KEY) {
     const brevoOk = await sendViaBrevo(email, payload);
     if (brevoOk) return { delivered: true, via: 'brevo' };

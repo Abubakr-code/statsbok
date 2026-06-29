@@ -14,6 +14,12 @@ const { notifySuccessfulLogin } = require('../services/authNotificationService')
 const COOKIE_NAME = 'token';
 const CODE_TTL_MS = 15 * 60 * 1000;
 
+// Demo mode: when no email provider can deliver codes (e.g. on a host that
+// blocks SMTP and without a verified email domain), skip the email code and
+// sign the user in immediately on registration. Flip SKIP_EMAIL_VERIFICATION
+// back to false once a working email sender is configured.
+const SKIP_EMAIL_VERIFICATION = process.env.SKIP_EMAIL_VERIFICATION === 'true';
+
 function cookieOptions() {
   const week = 7 * 24 * 60 * 60 * 1000;
   const isProduction = process.env.NODE_ENV === 'production';
@@ -180,6 +186,18 @@ async function register(req, res, next) {
         language: language || 'uz',
         verified: false
       });
+    }
+
+    // Demo mode: no email code — verify and sign the user in right away.
+    if (SKIP_EMAIL_VERIFICATION) {
+      user.verified = true;
+      user.verificationCodeHash = null;
+      user.verificationExpires = null;
+      await user.save();
+      const token = signToken(user);
+      res.cookie(COOKIE_NAME, token, cookieOptions());
+      notifySuccessfulLogin(user, req, 'email_signup').catch(() => {});
+      return res.status(201).json({ user: publicUser(user), verified: true });
     }
 
     const result = await issueCode(user, language);
