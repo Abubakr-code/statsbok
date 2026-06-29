@@ -30,15 +30,21 @@ if (isProduction) {
 app.use(securityHeaders());
 app.use(blockSuspiciousPaths);
 
+// Health check — declared BEFORE CORS so platform health probes (Render, etc.),
+// which send no Origin header, are never rejected by the CORS origin guard.
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
 app.use(
   cors({
     origin(origin, callback) {
-      // In production, block requests with no Origin header (direct curl/bot attacks).
-      // In development, allow browserless calls (Postman, local scripts).
-      if (!origin) {
-        if (isProduction) return callback(new Error('Origin required'));
-        return callback(null, true);
-      }
+      // Allow requests with no Origin header. CORS is a browser-only protection
+      // (curl/bots ignore it anyway), so blocking no-Origin gives no real
+      // security while breaking legitimate server-to-server callers: platform
+      // health checks, OG link-preview crawlers (Telegram/Facebook), and the
+      // Telegram bot. Browser cross-origin requests are still restricted below.
+      if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error('Not allowed by CORS'));
     },
@@ -59,11 +65,6 @@ app.use(mongoSanitize());
 
 // Prevent HTTP Parameter Pollution (duplicate query params like ?sort=asc&sort=desc).
 app.use(hpp());
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
-});
 
 // General rate limit on all API routes.
 app.use('/api', apiLimiter);
