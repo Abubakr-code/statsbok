@@ -47,11 +47,17 @@ services:
         value: false
       - key: AUTH_CODE_TEST_INBOX
         sync: false
-      # Gmail SMTP — verification codes are delivered to every user's inbox.
+      # Gmail SMTP — used only for local/dev (Render blocks outbound SMTP).
       - key: GMAIL_USER
         sync: false
       - key: GMAIL_APP_PASSWORD
         sync: false
+      # Brevo (HTTP API) — primary email sender in production. Works on Render
+      # because it sends over HTTPS, not SMTP. 300 emails/day free.
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER
+        value: azaabubakr760@gmail.com
 
   # Telegram bot — runs in webhook mode so it works on Render's free plan
   # (Telegram traffic wakes the service; no always-on background worker needed).

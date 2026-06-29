@@ -175,7 +175,12 @@ function gmailTransporter() {
   if (!user || !pass) return null;
   return nodemailer.createTransport({
     service: 'gmail',
-    auth: { user, pass }
+    auth: { user, pass },
+    // Fail fast instead of hanging for ~90s. Some hosts (e.g. Render free)
+    // block outbound SMTP ports, which otherwise stalls the whole request.
+    connectionTimeout: 7000,
+    greetingTimeout: 7000,
+    socketTimeout: 10000
   });
 }
 
@@ -193,6 +198,44 @@ async function sendViaGmail(email, payload) {
     return true;
   } catch (err) {
     console.warn('[email] Gmail SMTP failed:', err.message);
+    return false;
+  }
+}
+
+// ─── Brevo (HTTP API) ──────────────────────────────────────────────────────
+// Brevo sends over HTTPS (not SMTP), so it works on hosts that block SMTP
+// ports such as Render's free plan. Free tier: 300 emails/day. Setup: create a
+// key at brevo.com, verify the sender address, then set BREVO_API_KEY and
+// BREVO_SENDER (the verified sender email).
+const BREVO_URL = 'https://api.brevo.com/v3/smtp/email';
+
+async function sendViaBrevo(email, payload) {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return false;
+  const senderEmail = process.env.BREVO_SENDER || process.env.GMAIL_USER;
+  if (!senderEmail) return false;
+  try {
+    const res = await fetch(BREVO_URL, {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey,
+        'content-type': 'application/json',
+        accept: 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { name: 'StatBooks', email: senderEmail },
+        to: [{ email }],
+        subject: payload.subject,
+        htmlContent: payload.html,
+        textContent: payload.text
+      })
+    });
+    if (res.ok) return true;
+    const detail = await res.text().catch(() => '');
+    console.warn(`[email] Brevo send failed (${res.status}): ${detail.slice(0, 200)}`);
+    return false;
+  } catch (err) {
+    console.warn('[email] Brevo request failed:', err.message);
     return false;
   }
 }
@@ -238,16 +281,22 @@ async function sendVerificationCode(email, code, lang = 'uz') {
   const { subject, html, text } = emailBody(code, lang);
   const payload = { subject, html, text };
 
-  // Prefer Gmail SMTP when configured: Resend (without a verified domain) can
-  // only email the account owner, so for real users Gmail is the reliable path.
-  // Sending via Gmail directly also avoids a wasted 403 round-trip to Resend.
+  // Prefer HTTP email providers that work on SMTP-blocked hosts (Render free).
+  // Order: Brevo (HTTP, sends to anyone) → Gmail SMTP (local/dev) → Resend.
+  if (process.env.BREVO_API_KEY) {
+    const brevoOk = await sendViaBrevo(recipient, payload);
+    if (brevoOk) {
+      console.log(`[email] Brevo sent verification to ${recipient}`);
+      return { delivered: true, via: 'brevo', redirected, deliveredTo: recipient };
+    }
+  }
   if (gmailTransporter()) {
     const gmailOk = await sendViaGmail(recipient, payload);
     if (gmailOk) {
       console.log(`[email] Gmail SMTP sent verification to ${recipient}`);
       return { delivered: true, via: 'gmail', redirected, deliveredTo: recipient };
     }
-    // Gmail failed (bad app password, etc.) — fall through to Resend/dev below.
+    // Gmail failed (bad app password, SMTP blocked, etc.) — fall through.
   }
 
   if (!apiKey) {
@@ -307,7 +356,11 @@ async function sendLoginAlertEmail(email, meta = {}, lang = 'uz') {
   const { subject, html, text } = loginAlertBody(meta, lang);
   const payload = { subject, html, text };
 
-  // Prefer Gmail SMTP when configured (see sendVerificationCode for rationale).
+  // Prefer HTTP providers first (see sendVerificationCode for rationale).
+  if (process.env.BREVO_API_KEY) {
+    const brevoOk = await sendViaBrevo(email, payload);
+    if (brevoOk) return { delivered: true, via: 'brevo' };
+  }
   if (gmailTransporter()) {
     const gmailOk = await sendViaGmail(email, payload);
     if (gmailOk) return { delivered: true, via: 'gmail' };
