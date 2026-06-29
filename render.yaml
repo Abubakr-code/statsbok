@@ -14,7 +14,7 @@ services:
       - key: PORT
         value: 10000
       - key: FRONTEND_URL
-        value: https://statabooks.netlify.app
+        value: https://statsbooks.netlify.app
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET
