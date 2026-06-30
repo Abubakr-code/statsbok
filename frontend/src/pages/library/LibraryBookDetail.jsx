@@ -4,6 +4,7 @@ import { useI18n } from '../../i18n';
 import { useAuth } from '../../hooks/useAuth';
 import { useToastStore } from '../../store/toastStore';
 import SEO from '../../components/SEO';
+import BookReader from '../../components/library/BookReader';
 import api from '../../services/api';
 
 const TABS = ['progress', 'insights', 'review', 'quotes'];
@@ -82,6 +83,7 @@ export default function LibraryBookDetail() {
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('progress');
+  const [readerOpen, setReaderOpen] = useState(false);
 
   // Progress
   const [newPage, setNewPage] = useState('');
@@ -212,14 +214,12 @@ export default function LibraryBookDetail() {
             <p className="text-xs text-parchment-faint mt-2">{book.currentPage || 0}/{book.totalPages} {x.pages}</p>
           )}
           {book.pdfFileId && (
-            <a
-              href={`/api/library/${book._id}/pdf`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => setReaderOpen(true)}
               className="btn-primary mt-4 flex w-full items-center justify-center gap-2 py-2 text-sm"
             >
               {x.readPdf}
-            </a>
+            </button>
           )}
         </div>
 
@@ -380,6 +380,10 @@ export default function LibraryBookDetail() {
           )}
         </div>
       </div>
+
+      {readerOpen && book.pdfFileId && (
+        <BookReader book={book} lang={lang} onClose={() => setReaderOpen(false)} />
+      )}
     </div>
   );
 }
