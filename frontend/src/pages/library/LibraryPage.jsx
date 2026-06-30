@@ -7,6 +7,7 @@ import { useToastStore } from '../../store/toastStore';
 import SEO from '../../components/SEO';
 import AddBookModal from '../../components/library/AddBookModal';
 import LibraryBookCard from '../../components/library/LibraryBookCard';
+import BookshelfView from '../../components/library/BookshelfView';
 import GoalRing from '../../components/library/GoalRing';
 
 const SHELVES = [
@@ -43,6 +44,12 @@ export default function LibraryPage() {
   const { books, loading, activeShelf, stats, goal, setShelf, fetchBooks, fetchStats, fetchGoal, deleteBook, changeShelf } = useLibraryStore();
   const showToast = useToastStore((s) => s.show);
   const [addOpen, setAddOpen] = useState(false);
+  // 'grid' = manage cards, 'shelf' = 3D bookshelf view. Persisted per browser.
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('libraryView') || 'grid');
+  function changeView(mode) {
+    setViewMode(mode);
+    localStorage.setItem('libraryView', mode);
+  }
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
@@ -132,18 +139,36 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {/* Shelf tabs */}
-      <div className="mb-6 flex gap-1 overflow-x-auto pb-1">
-        {SHELVES.map((shelf) => (
-          <ShelfTab
-            key={shelf.id}
-            shelf={shelf}
-            active={activeShelf === shelf.id}
-            onClick={setShelf}
-            isPremium={isPremium}
-            lang={lang}
-          />
-        ))}
+      {/* Shelf tabs + view toggle */}
+      <div className="mb-6 flex items-center gap-2">
+        <div className="flex flex-1 gap-1 overflow-x-auto pb-1">
+          {SHELVES.map((shelf) => (
+            <ShelfTab
+              key={shelf.id}
+              shelf={shelf}
+              active={activeShelf === shelf.id}
+              onClick={setShelf}
+              isPremium={isPremium}
+              lang={lang}
+            />
+          ))}
+        </div>
+        <div className="flex shrink-0 items-center gap-1 rounded-lg bg-ink-800 p-1">
+          <button
+            onClick={() => changeView('grid')}
+            title="Grid"
+            className={`rounded-md p-1.5 transition-colors ${viewMode === 'grid' ? 'bg-amber text-ink' : 'text-parchment-faint hover:text-parchment'}`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+          <button
+            onClick={() => changeView('shelf')}
+            title="Bookshelf"
+            className={`rounded-md p-1.5 transition-colors ${viewMode === 'shelf' ? 'bg-amber text-ink' : 'text-parchment-faint hover:text-parchment'}`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19V5M8 19V7M12 19V6M16 19V8M20 19V5M3 19h18"/></svg>
+          </button>
+        </div>
       </div>
 
       {/* Books grid */}
@@ -171,7 +196,11 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {!loading && books.length > 0 && (
+      {!loading && books.length > 0 && viewMode === 'shelf' && (
+        <BookshelfView books={books} />
+      )}
+
+      {!loading && books.length > 0 && viewMode === 'grid' && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {books.map((book) => (
             <LibraryBookCard
