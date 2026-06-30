@@ -108,6 +108,7 @@ const dict = {
     'auth.register.alt': 'Hisobingiz bormi?',
     'auth.register.demoNote': 'Demo rejimi: email tasdiqlashsiz darhol kirasiz',
     'auth.google': 'Google bilan davom etish',
+    'auth.googleInApp': 'Google bilan kirish ushbu ilova ichida ishlamaydi. Email va parol bilan kiring yoki saytni brauzerda (Chrome/Safari) oching.',
     'auth.forgot': 'Parolni unutdingizmi?',
     'auth.or': 'yoki',
 
@@ -341,6 +342,7 @@ const dict = {
     'auth.register.alt': 'Already have an account?',
     'auth.register.demoNote': 'Demo mode: sign in instantly, no email confirmation',
     'auth.google': 'Continue with Google',
+    'auth.googleInApp': 'Google sign-in doesn\'t work inside this app. Use email & password, or open the site in a browser (Chrome/Safari).',
     'auth.forgot': 'Forgot password?',
     'auth.or': 'or',
 
@@ -575,6 +577,7 @@ const dict = {
     'auth.register.alt': 'Уже есть аккаунт?',
     'auth.register.demoNote': 'Демо-режим: вход сразу, без подтверждения email',
     'auth.google': 'Продолжить с Google',
+    'auth.googleInApp': 'Вход через Google не работает внутри этого приложения. Войдите по email и паролю или откройте сайт в браузере (Chrome/Safari).',
     'auth.forgot': 'Забыли пароль?',
     'auth.or': 'или',
 

@@ -55,7 +55,7 @@ const MSGS = {
   uz: {
     langSelect:     '🌐 <b>Tilni tanlang:</b>',
     langSet:        '✅ Til o\'zgartirildi: O\'zbek 🇺🇿',
-    welcome:        (n) => `📖 <b>Assalomu alaykum, ${n}!</b>\n\nStatBooks — kitob iqtiboslarini topish platformasi.\n\nIqtibos matni, muallif ismi yoki mavzu yozing — darhol topib beraman!\n\n📌 /help — barcha komandalar`,
+    welcome:        (n) => `📖 <b>Assalomu alaykum, ${n}!</b>\n\nStatBooks — kitob iqtiboslarini topish platformasi.\n\nIqtibos matni, muallif ismi yoki mavzu yozing — darhol topib beraman!\n\n📎 <b>PDF kitob</b> yuborsangiz — shaxsiy kutubxonangizga qo‘shaman (avval /link orqali akkauntingizni bog‘lang).\n\n📌 /help — barcha komandalar`,
     howto:          'Qidiruv uchun iqtibos yoki muallif yozing.',
     searching:      '🔍 Qidirilmoqda...',
     noResults:      (q) => `😔 <b>"${q}"</b> bo\'yicha hech narsa topilmadi.\n\n💡 Boshqacha so\'z bilan urinib ko\'ring.`,
@@ -90,7 +90,7 @@ const MSGS = {
     more:           (n, url) => `🔎 Jami <b>${n}</b> ta natija. <a href="${url}">Barchasini saytda ko\'rish</a>`,
     allShown:       '✅ Barcha natijalar ko\'rsatildi.',
     saves:          (n) => `❤️ ${n} marta saqlangan`,
-    helpText:       `📚 <b>StatBooks Bot — Yordam</b>\n\n<b>Komandalar:</b>\n/start — Bosh sahifa\n/help — Ushbu yordam\n/mood — Kayfiyat bo\'yicha tavsiya\n/top — Haftalik top iqtiboslar\n/lang — Tilni o\'zgartirish\n/login — Saytga kirish\n/link — Akkauntni bog\'lash\n/premium — Premium haqida\n/subscribe — Kunlik iqtibos obunasi\n/unsubscribe — Obunani bekor qilish\n/ai — AI suhbat rejimi\n\nYoki shunchaki iqtibos yozing! 📖`,
+    helpText:       `📚 <b>StatBooks Bot — Yordam</b>\n\n<b>Komandalar:</b>\n/start — Bosh sahifa\n/help — Ushbu yordam\n/mood — Kayfiyat bo\'yicha tavsiya\n/top — Haftalik top iqtiboslar\n/lang — Tilni o\'zgartirish\n/login — Saytga kirish\n/link — Akkauntni bog\'lash\n/premium — Premium haqida\n/subscribe — Kunlik iqtibos obunasi\n/unsubscribe — Obunani bekor qilish\n/ai — AI suhbat rejimi\n\n📎 PDF kitob yuboring — kutubxonangizga qo‘shiladi (avval /link).\nYoki shunchaki iqtibos yozing! 📖`,
     savedMsg:       `🔖 <b>Saqlangan iqtiboslar</b>\n\nSaqlangan iqtiboslaringizni saytda ko\'ring:`,
     savedBtn:       '🔖 Saqlangan iqtiboslar',
     dailyTitle:     '📖 <b>Bugungi iqtibos</b>',
@@ -126,7 +126,7 @@ const MSGS = {
   ru: {
     langSelect:     '🌐 <b>Выберите язык:</b>',
     langSet:        '✅ Язык изменён: Русский 🇷🇺',
-    welcome:        (n) => `📖 <b>Добро пожаловать, ${n}!</b>\n\nStatBooks — платформа для поиска книжных цитат.\n\nНапишите цитату, имя автора или тему — найду мгновенно!\n\n📌 /help — все команды`,
+    welcome:        (n) => `📖 <b>Добро пожаловать, ${n}!</b>\n\nStatBooks — платформа для поиска книжных цитат.\n\nНапишите цитату, имя автора или тему — найду мгновенно!\n\n📎 Пришлите <b>PDF-книгу</b> — добавлю в вашу личную библиотеку (сначала привяжите аккаунт через /link).\n\n📌 /help — все команды`,
     howto:          'Введите цитату или автора для поиска.',
     searching:      '🔍 Поиск...',
     noResults:      (q) => `😔 По запросу <b>"${q}"</b> ничего не найдено.\n\n💡 Попробуйте другие слова.`,
@@ -161,7 +161,7 @@ const MSGS = {
     more:           (n, url) => `🔎 Всего <b>${n}</b> результатов. <a href="${url}">Смотреть все на сайте</a>`,
     allShown:       '✅ Все результаты показаны.',
     saves:          (n) => `❤️ ${n} сохранений`,
-    helpText:       `📚 <b>StatBooks Bot — Помощь</b>\n\n<b>Команды:</b>\n/start — Главная\n/help — Помощь\n/mood — Подбор по настроению\n/top — Топ цитаты\n/lang — Сменить язык\n/login — Войти на сайт\n/link — Привязать аккаунт\n/premium — О Premium\n/subscribe — Ежедневная цитата\n/unsubscribe — Отменить подписку\n/ai — Режим AI\n\nИли просто напишите цитату! 📖`,
+    helpText:       `📚 <b>StatBooks Bot — Помощь</b>\n\n<b>Команды:</b>\n/start — Главная\n/help — Помощь\n/mood — Подбор по настроению\n/top — Топ цитаты\n/lang — Сменить язык\n/login — Войти на сайт\n/link — Привязать аккаунт\n/premium — О Premium\n/subscribe — Ежедневная цитата\n/unsubscribe — Отменить подписку\n/ai — Режим AI\n\n📎 Пришлите PDF-книгу — добавится в библиотеку (сначала /link).\nИли просто напишите цитату! 📖`,
     savedMsg:       '🔖 <b>Сохранённые цитаты</b>\n\nПросматривайте сохранённые цитаты на сайте:',
     savedBtn:       '🔖 Сохранённые цитаты',
     dailyTitle:     '📖 <b>Цитата дня</b>',
@@ -197,7 +197,7 @@ const MSGS = {
   en: {
     langSelect:     '🌐 <b>Select language:</b>',
     langSet:        '✅ Language set: English 🇬🇧',
-    welcome:        (n) => `📖 <b>Welcome, ${n}!</b>\n\nStatBooks — find any book by its quote.\n\nType a quote, author name, or topic and I'll find it instantly!\n\n📌 /help — all commands`,
+    welcome:        (n) => `📖 <b>Welcome, ${n}!</b>\n\nStatBooks — find any book by its quote.\n\nType a quote, author name, or topic and I'll find it instantly!\n\n📎 Send a <b>PDF book</b> and I'll add it to your personal library (link your account first via /link).\n\n📌 /help — all commands`,
     howto:          'Type a quote or author to search.',
     searching:      '🔍 Searching...',
     noResults:      (q) => `😔 Nothing found for <b>"${q}"</b>.\n\n💡 Try different words.`,
@@ -232,7 +232,7 @@ const MSGS = {
     more:           (n, url) => `🔎 <b>${n}</b> results total. <a href="${url}">View all on site</a>`,
     allShown:       '✅ All results shown.',
     saves:          (n) => `❤️ ${n} saves`,
-    helpText:       `📚 <b>StatBooks Bot — Help</b>\n\n<b>Commands:</b>\n/start — Home\n/help — Help\n/mood — Mood-based picks\n/top — Top quotes\n/lang — Change language\n/login — Login to site\n/link — Link account\n/premium — About Premium\n/subscribe — Daily quote\n/unsubscribe — Cancel subscription\n/ai — AI chat mode\n\nOr just type a quote! 📖`,
+    helpText:       `📚 <b>StatBooks Bot — Help</b>\n\n<b>Commands:</b>\n/start — Home\n/help — Help\n/mood — Mood-based picks\n/top — Top quotes\n/lang — Change language\n/login — Login to site\n/link — Link account\n/premium — About Premium\n/subscribe — Daily quote\n/unsubscribe — Cancel subscription\n/ai — AI chat mode\n\n📎 Send a PDF book — it's added to your library (link first via /link).\nOr just type a quote! 📖`,
     savedMsg:       '🔖 <b>Saved Quotes</b>\n\nView your saved quotes on the site:',
     savedBtn:       '🔖 Saved Quotes',
     dailyTitle:     '📖 <b>Daily Quote</b>',
@@ -980,13 +980,20 @@ bot.on('callback_query', async (query) => {
 
   await bot.answerCallbackQuery(query.id).catch(() => {});
 
-  // Language selection
+  // Language selection — edit the existing message in place (no new message,
+  // no need to press /start again).
   if (data.startsWith('lang:')) {
     const newLang = data.split(':')[1];
     if (['uz', 'ru', 'en'].includes(newLang)) {
       state.lang = newLang;
       syncUser(query.message, { telegramId: query.from.id, lang: newLang });
-      await bot.sendMessage(chatId, t(newLang, 'langSet')).catch(() => {});
+      const name = esc(query.from.first_name || 'Do\'st');
+      await bot.editMessageText(t(newLang, 'welcome', name), {
+        chat_id: chatId,
+        message_id: query.message.message_id,
+        parse_mode: 'HTML',
+        reply_markup: welcomeKeyboard(newLang, query.message.chat.type === 'private')
+      }).catch(() => bot.sendMessage(chatId, t(newLang, 'langSet')).catch(() => {}));
     }
     return;
   }

@@ -8,6 +8,17 @@ const ENV_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
 const GOOGLE_SCOPES = 'openid email profile';
 
+// Google blocks OAuth inside embedded webviews (Telegram Mini App, Instagram,
+// Facebook, Android WebView, etc.) with "disallowed_useragent". Detect those so
+// we can guide the user to email/password or an external browser instead of
+// showing a button that will fail.
+function isInAppBrowser() {
+  if (typeof navigator === 'undefined') return false;
+  if (typeof window !== 'undefined' && window.Telegram?.WebApp?.initData) return true;
+  const ua = navigator.userAgent || '';
+  return /Telegram|FBAN|FBAV|Instagram|Line\/|MicroMessenger|; wv\)|GSA\//i.test(ua);
+}
+
 function loadGis() {
   return new Promise((resolve, reject) => {
     if (window.google?.accounts?.id) return resolve();
@@ -107,6 +118,15 @@ export default function GoogleButton({ onError }) {
     }
     // Force account chooser every time so users can switch Gmail accounts.
     tokenClientRef.current.requestAccessToken({ prompt: 'select_account' });
+  }
+
+  // In embedded webviews Google OAuth is blocked — show guidance instead.
+  if (isInAppBrowser()) {
+    return (
+      <p className="rounded-lg border border-ink-600 bg-ink-800/60 px-3 py-2.5 text-center text-xs text-parchment-faint">
+        {t('auth.googleInApp')}
+      </p>
+    );
   }
 
   if (!clientId) {
