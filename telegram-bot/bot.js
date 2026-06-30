@@ -110,7 +110,7 @@ const MSGS = {
     more:           (n, url) => `🔎 Jami <b>${n}</b> ta natija. <a href="${url}">Barchasini saytda ko\'rish</a>`,
     allShown:       '✅ Barcha natijalar ko\'rsatildi.',
     saves:          (n) => `❤️ ${n} marta saqlangan`,
-    helpText:       `📚 <b>StatBooks Bot — Yordam</b>\n\n<b>Komandalar:</b>\n/start — Bosh sahifa\n/help — Ushbu yordam\n/mood — Kayfiyat bo\'yicha tavsiya\n/top — Haftalik top iqtiboslar\n/lang — Tilni o\'zgartirish\n/login — Saytga kirish\n/premium — Premium haqida\n/subscribe — Kunlik iqtibos obunasi\n/unsubscribe — Obunani bekor qilish\n/ai — AI suhbat rejimi\n\nYoki shunchaki iqtibos yozing! 📖`,
+    helpText:       `📚 <b>StatBooks Bot — Yordam</b>\n\n<b>Komandalar:</b>\n/start — Bosh sahifa\n/help — Ushbu yordam\n/mood — Kayfiyat bo\'yicha tavsiya\n/top — Haftalik top iqtiboslar\n/lang — Tilni o\'zgartirish\n/login — Saytga kirish\n/link — Akkauntni bog\'lash\n/premium — Premium haqida\n/subscribe — Kunlik iqtibos obunasi\n/unsubscribe — Obunani bekor qilish\n/ai — AI suhbat rejimi\n\nYoki shunchaki iqtibos yozing! 📖`,
     savedMsg:       `🔖 <b>Saqlangan iqtiboslar</b>\n\nSaqlangan iqtiboslaringizni saytda ko\'ring:`,
     savedBtn:       '🔖 Saqlangan iqtiboslar',
     dailyTitle:     '📖 <b>Bugungi iqtibos</b>',
@@ -129,6 +129,14 @@ const MSGS = {
     moodMotivation: '🔥 Motivatsiya',
     moodWisdom:     '🦉 Hikmat',
     moodAdventure:  '🗺 Sarguzasht',
+    btnLibrary:     '➕ Kutubxona',
+    linkBtn:        '🔗 Akkauntni bog‘lash',
+    linkMsg:        (code) => `🔗 <b>Akkauntni bog‘lash</b>\n\nKod: <code>${code}</code>\n\nSaytga kiring (login qiling) va pastdagi tugma orqali tasdiqlang. Kod 15 daqiqa amal qiladi.\n\nBog‘langach, kitoblarni "➕ Kutubxona" tugmasi bilan shaxsiy kutubxonangizga (3D javon) qo‘shasiz.`,
+    libAdded:       '✅ Shaxsiy kutubxonangizga qo‘shildi! 📚',
+    libDup:         'ℹ️ Bu kitob allaqachon kutubxonangizda.',
+    libLimit:       '⚠️ Bepul limit to‘ldi. /premium orqali cheksiz qiling.',
+    libNotLinked:   '🔗 Avval akkauntingizni bog‘lang — /link buyrug‘ini bosing.',
+    libError:       '😔 Qo‘shib bo‘lmadi. Keyinroq urinib ko‘ring.',
   },
   ru: {
     langSelect:     '🌐 <b>Выберите язык:</b>',
@@ -168,7 +176,7 @@ const MSGS = {
     more:           (n, url) => `🔎 Всего <b>${n}</b> результатов. <a href="${url}">Смотреть все на сайте</a>`,
     allShown:       '✅ Все результаты показаны.',
     saves:          (n) => `❤️ ${n} сохранений`,
-    helpText:       `📚 <b>StatBooks Bot — Помощь</b>\n\n<b>Команды:</b>\n/start — Главная\n/help — Помощь\n/mood — Подбор по настроению\n/top — Топ цитаты\n/lang — Сменить язык\n/login — Войти на сайт\n/premium — О Premium\n/subscribe — Ежедневная цитата\n/unsubscribe — Отменить подписку\n/ai — Режим AI\n\nИли просто напишите цитату! 📖`,
+    helpText:       `📚 <b>StatBooks Bot — Помощь</b>\n\n<b>Команды:</b>\n/start — Главная\n/help — Помощь\n/mood — Подбор по настроению\n/top — Топ цитаты\n/lang — Сменить язык\n/login — Войти на сайт\n/link — Привязать аккаунт\n/premium — О Premium\n/subscribe — Ежедневная цитата\n/unsubscribe — Отменить подписку\n/ai — Режим AI\n\nИли просто напишите цитату! 📖`,
     savedMsg:       '🔖 <b>Сохранённые цитаты</b>\n\nПросматривайте сохранённые цитаты на сайте:',
     savedBtn:       '🔖 Сохранённые цитаты',
     dailyTitle:     '📖 <b>Цитата дня</b>',
@@ -187,6 +195,14 @@ const MSGS = {
     moodMotivation: '🔥 Мотивация',
     moodWisdom:     '🦉 Мудрость',
     moodAdventure:  '🗺 Приключения',
+    btnLibrary:     '➕ В библиотеку',
+    linkBtn:        '🔗 Привязать аккаунт',
+    linkMsg:        (code) => `🔗 <b>Привязка аккаунта</b>\n\nКод: <code>${code}</code>\n\nЗайдите на сайт (войдите) и подтвердите кнопкой ниже. Код действует 15 минут.\n\nПосле привязки добавляйте книги в личную библиотеку (3D полка) кнопкой "➕ В библиотеку".`,
+    libAdded:       '✅ Добавлено в вашу библиотеку! 📚',
+    libDup:         'ℹ️ Эта книга уже в вашей библиотеке.',
+    libLimit:       '⚠️ Достигнут бесплатный лимит. Оформите /premium.',
+    libNotLinked:   '🔗 Сначала привяжите аккаунт — команда /link.',
+    libError:       '😔 Не удалось добавить. Попробуйте позже.',
   },
   en: {
     langSelect:     '🌐 <b>Select language:</b>',
@@ -226,7 +242,7 @@ const MSGS = {
     more:           (n, url) => `🔎 <b>${n}</b> results total. <a href="${url}">View all on site</a>`,
     allShown:       '✅ All results shown.',
     saves:          (n) => `❤️ ${n} saves`,
-    helpText:       `📚 <b>StatBooks Bot — Help</b>\n\n<b>Commands:</b>\n/start — Home\n/help — Help\n/mood — Mood-based picks\n/top — Top quotes\n/lang — Change language\n/login — Login to site\n/premium — About Premium\n/subscribe — Daily quote\n/unsubscribe — Cancel subscription\n/ai — AI chat mode\n\nOr just type a quote! 📖`,
+    helpText:       `📚 <b>StatBooks Bot — Help</b>\n\n<b>Commands:</b>\n/start — Home\n/help — Help\n/mood — Mood-based picks\n/top — Top quotes\n/lang — Change language\n/login — Login to site\n/link — Link account\n/premium — About Premium\n/subscribe — Daily quote\n/unsubscribe — Cancel subscription\n/ai — AI chat mode\n\nOr just type a quote! 📖`,
     savedMsg:       '🔖 <b>Saved Quotes</b>\n\nView your saved quotes on the site:',
     savedBtn:       '🔖 Saved Quotes',
     dailyTitle:     '📖 <b>Daily Quote</b>',
@@ -245,6 +261,14 @@ const MSGS = {
     moodMotivation: '🔥 Motivation',
     moodWisdom:     '🦉 Wisdom',
     moodAdventure:  '🗺 Adventure',
+    btnLibrary:     '➕ To library',
+    linkBtn:        '🔗 Link account',
+    linkMsg:        (code) => `🔗 <b>Link your account</b>\n\nCode: <code>${code}</code>\n\nOpen the site (log in) and confirm with the button below. The code is valid for 15 minutes.\n\nOnce linked, add books to your personal library (3D shelf) with the "➕ To library" button.`,
+    libAdded:       '✅ Added to your library! 📚',
+    libDup:         'ℹ️ This book is already in your library.',
+    libLimit:       '⚠️ Free limit reached. Upgrade via /premium.',
+    libNotLinked:   '🔗 Link your account first — use /link.',
+    libError:       '😔 Could not add. Try again later.',
   }
 };
 
@@ -439,10 +463,13 @@ function resultKeyboard(item, lang, idx) {
   rows.push(row1);
 
   rows.push([
-    { text: t(lang, 'btnSimilar'), callback_data: `sim:${idx}` },
-    { text: t(lang, 'btnShare'), switch_inline_query: shareText }
+    { text: t(lang, 'btnLibrary'), callback_data: `lib:${idx}` },
+    { text: t(lang, 'btnSimilar'), callback_data: `sim:${idx}` }
   ]);
-  rows.push([{ text: t(lang, 'btnSite'), url: siteUrl }]);
+  rows.push([
+    { text: t(lang, 'btnShare'), switch_inline_query: shareText },
+    { text: t(lang, 'btnSite'), url: siteUrl }
+  ]);
   return { inline_keyboard: rows };
 }
 
@@ -828,6 +855,33 @@ bot.onText(/\/login/, async (msg) => {
   }
 });
 
+// ── /link — connect Telegram to a StatBooks account ────────────────────────────
+bot.onText(/\/link/, async (msg) => {
+  const chatId = msg.chat.id;
+  const state = getState(chatId);
+  const { lang } = state;
+  try {
+    const data = await apiPost('/telegram/link/start', {
+      telegramId: msg.from.id,
+      username: msg.from.username || null,
+      firstName: msg.from.first_name || null,
+      lang
+    });
+    if (!data || !data.code) throw new Error('no code');
+    await bot.sendMessage(chatId, t(lang, 'linkMsg', data.code), {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [[
+          { text: t(lang, 'linkBtn'), url: `${FRONTEND}/link-telegram?code=${data.code}` }
+        ]]
+      }
+    });
+  } catch (err) {
+    console.error('/link error:', err.message);
+    await bot.sendMessage(chatId, t(lang, 'libError')).catch(() => {});
+  }
+});
+
 // ── /premium ──────────────────────────────────────────────────────────────────
 bot.onText(/\/premium/, async (msg) => {
   const chatId = msg.chat.id;
@@ -1041,6 +1095,42 @@ bot.on('callback_query', async (query) => {
     return;
   }
 
+  // Add a result to the user's personal library (needs a linked account)
+  if (data.startsWith('lib:')) {
+    const item = state.lastResults[Number(data.slice(4))];
+    if (!item) return;
+    const book = item.book || {};
+    try {
+      const resp = await apiPost('/telegram/library/add', {
+        telegramId: query.from.id,
+        book: {
+          title: book.title || book.titleUz || '',
+          author: book.author || book.authorUz || '',
+          year: book.year || null,
+          coverUrl: isHttpUrl(book.coverImage) ? book.coverImage : null,
+          genre: book.genre || null,
+          language: book.language || lang,
+          statbooksBookId: book.id || null
+        }
+      });
+      if (resp.linked === false) {
+        await bot.sendMessage(chatId, t(lang, 'libNotLinked')).catch(() => {});
+      } else if (resp.added) {
+        await bot.sendMessage(chatId, t(lang, 'libAdded')).catch(() => {});
+      } else if (resp.duplicate) {
+        await bot.sendMessage(chatId, t(lang, 'libDup')).catch(() => {});
+      } else if (resp.limit) {
+        await bot.sendMessage(chatId, t(lang, 'libLimit')).catch(() => {});
+      } else {
+        await bot.sendMessage(chatId, t(lang, 'libError')).catch(() => {});
+      }
+    } catch (err) {
+      console.error('lib add error:', err.message);
+      await bot.sendMessage(chatId, t(lang, 'libError')).catch(() => {});
+    }
+    return;
+  }
+
   // Similar books — search by the same author (or title)
   if (data.startsWith('sim:')) {
     const item = state.lastResults[Number(data.slice(4))];
@@ -1216,6 +1306,7 @@ bot.on('error', (err) => console.error('Bot error:', err.message));
       { command: 'top', description: 'Haftalik top / Weekly top' },
       { command: 'ai', description: 'AI suhbat / AI chat' },
       { command: 'saved', description: 'Saqlanganlar / Saved' },
+      { command: 'link', description: 'Akkauntni bog\'lash / Link account' },
       { command: 'premium', description: 'Premium' },
       { command: 'login', description: 'Saytga kirish / Login' },
       { command: 'lang', description: 'Til / Language' },

@@ -24,6 +24,7 @@ import WidgetSearch from './pages/WidgetSearch';
 import WidgetDaily from './pages/WidgetDaily';
 import WidgetBook from './pages/WidgetBook';
 import NotFound from './pages/NotFound';
+import LinkTelegram from './pages/LinkTelegram';
 import LibraryPage from './pages/library/LibraryPage';
 import LibraryBookDetail from './pages/library/LibraryBookDetail';
 import ReadingGoalPage from './pages/library/ReadingGoalPage';
@@ -92,6 +93,7 @@ function MainApp() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/bloggers"        element={<BloggersLeaderboard />} />
           <Route path="/collection/:slug" element={<PublicCollection />} />
+          <Route path="/link-telegram" element={<LinkTelegram />} />
           <Route path="/library" element={<ProtectedRoute><LibraryPage /></ProtectedRoute>} />
           <Route path="/library/goal" element={<ProtectedRoute><ReadingGoalPage /></ProtectedRoute>} />
           <Route path="/library/:id" element={<ProtectedRoute><LibraryBookDetail /></ProtectedRoute>} />
