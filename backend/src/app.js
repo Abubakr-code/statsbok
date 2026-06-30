@@ -84,6 +84,16 @@ app.use('/api/public', require('./routes/publicBlogger'));
 app.use('/api/library', require('./routes/library'));
 app.use('/api', require('./routes/publicLibrary'));
 
+// Telegram bot — runs in-process (webhook). Mounted only when a token is set so
+// local dev without a token is unaffected. Must be before the 404 handler.
+if (process.env.TELEGRAM_BOT_TOKEN) {
+  try {
+    require('./bot').mountWebhook(app);
+  } catch (err) {
+    console.error('[bot] failed to mount:', err.message);
+  }
+}
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });

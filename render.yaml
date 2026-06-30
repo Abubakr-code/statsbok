@@ -66,32 +66,11 @@ services:
         sync: false
       - key: BREVO_SENDER
         value: azaabubakr760@gmail.com
-
-  # Telegram bot — runs in webhook mode so it works on Render's free plan
-  # (Telegram traffic wakes the service; no always-on background worker needed).
-  - type: web
-    name: statbooks-bot
-    runtime: node
-    rootDir: telegram-bot
-    plan: free
-    buildCommand: npm ci --omit=dev
-    startCommand: npm start
-    autoDeploy: true
-    envVars:
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: BOT_MODE
-        value: webhook
-      - key: BACKEND_URL
-        value: https://statbooks-backend.onrender.com
-      - key: FRONTEND_URL
-        value: https://statsbooks.netlify.app
-      - key: OPENROUTER_CHAT_API_KEY
-        sync: false
-      - key: OPENROUTER_CHAT_MODEL
-        value: nvidia/nemotron-3-super-120b-a12b:free
-      # Force channel subscription before using the bot. The bot must be an
-      # admin of CHANNEL_USERNAME for the check to actually enforce.
+      # ── Telegram bot (runs IN-PROCESS in webhook mode) ──────────────────────
+      # The bot is hosted inside this same backend service, so one free Render
+      # service runs both the API and the bot (OPENROUTER_CHAT_API_KEY above is
+      # shared). Keep this service awake with an uptime pinger (UptimeRobot →
+      # /api/health) for instant bot responses.
       - key: REQUIRE_CHANNEL
         value: "true"
       - key: CHANNEL_USERNAME
