@@ -108,6 +108,34 @@ async function getBook(req, res) {
   }
 }
 
+// Stream the book's PDF (uploaded via the bot). The bytes live on Telegram; we
+// fetch a fresh download URL with the bot token and pipe the file to the owner.
+async function streamPdf(req, res) {
+  try {
+    const book = await LibraryBook.findOne({ _id: req.params.id, userId: req.user._id })
+      .select('pdfFileId pdfFileName').lean();
+    if (!book || !book.pdfFileId) return res.status(404).json({ error: 'No PDF for this book' });
+
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) return res.status(503).json({ error: 'PDF storage not configured' });
+
+    const metaRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(book.pdfFileId)}`);
+    const meta = await metaRes.json();
+    if (!meta.ok || !meta.result?.file_path) return res.status(404).json({ error: 'PDF not found' });
+
+    const fileRes = await fetch(`https://api.telegram.org/file/bot${token}/${meta.result.file_path}`);
+    if (!fileRes.ok) return res.status(502).json({ error: 'Failed to fetch PDF' });
+
+    const buf = Buffer.from(await fileRes.arrayBuffer());
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `inline; filename="${encodeURIComponent(book.pdfFileName || 'book.pdf')}"`);
+    res.set('Cache-Control', 'private, max-age=300');
+    res.send(buf);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 async function updateBook(req, res) {
   try {
     const allowed = ['title', 'author', 'year', 'isbn', 'coverUrl', 'genre', 'language',
@@ -531,7 +559,7 @@ async function lookupByQuery(req, res) {
 }
 
 module.exports = {
-  getLibrary, addBook, getBook, updateBook, deleteBook,
+  getLibrary, addBook, getBook, streamPdf, updateBook, deleteBook,
   changeShelf, updateProgress, addSession,
   updateReview, toggleReviewPublic, getPublicReview,
   addInsight, deleteInsight,

@@ -201,4 +201,39 @@ router.post('/library/add', async (req, res, next) => {
   }
 });
 
+// POST /api/telegram/library/upload — bot uploads a PDF (Telegram file_id) into
+// the linked account's library. The actual bytes stay on Telegram; we store the
+// file_id and stream it later via GET /api/library/:id/pdf.
+router.post('/library/upload', async (req, res, next) => {
+  try {
+    const { telegramId, fileId, fileName, fileSize, title, author } = req.body;
+    if (!telegramId || !fileId) return res.status(400).json({ error: 'telegramId and fileId required' });
+    const tgUser = await TelegramUser.findOne({ telegramId: Number(telegramId) });
+    if (!tgUser || !tgUser.statbooksUserId) return res.json({ linked: false });
+
+    const userId = tgUser.statbooksUserId;
+    const User = require('../models/User');
+    const account = await User.findById(userId).select('plan').lean();
+    if (account?.plan !== 'premium') {
+      const count = await LibraryBook.countDocuments({ userId });
+      if (count >= LIBRARY_FREE_MAX_BOOKS) return res.json({ linked: true, added: false, limit: true });
+    }
+
+    const created = await LibraryBook.create({
+      userId,
+      title: String(title || fileName || 'PDF kitob').slice(0, 300),
+      author: String(author || '—').slice(0, 200),
+      language: 'uz',
+      shelf: 'reading',
+      source: 'manual',
+      pdfFileId: fileId,
+      pdfFileName: String(fileName || 'book.pdf').slice(0, 200),
+      pdfFileSize: Number(fileSize) || 0
+    });
+    res.json({ linked: true, added: true, bookId: created._id });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

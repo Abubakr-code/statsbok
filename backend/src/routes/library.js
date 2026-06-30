@@ -24,6 +24,7 @@ router.get('/lookup', ctrl.lookupByQuery);
 router.get('/', ctrl.getLibrary);
 router.post('/', checkLibraryLimit, ctrl.addBook);
 router.get('/:id', validateObjectId(), ctrl.getBook);
+router.get('/:id/pdf', validateObjectId(), ctrl.streamPdf);
 router.put('/:id', validateObjectId(), ctrl.updateBook);
 router.delete('/:id', validateObjectId(), ctrl.deleteBook);
 

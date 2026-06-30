@@ -137,6 +137,11 @@ const MSGS = {
     libLimit:       '⚠️ Bepul limit to‘ldi. /premium orqali cheksiz qiling.',
     libNotLinked:   '🔗 Avval akkauntingizni bog‘lang — /link buyrug‘ini bosing.',
     libError:       '😔 Qo‘shib bo‘lmadi. Keyinroq urinib ko‘ring.',
+    pdfOnly:        '📄 Faqat PDF fayl yuboring.',
+    pdfTooBig:      '⚠️ Fayl 20MB dan katta. Telegram bot 20MB gacha qabul qiladi.',
+    pdfUploading:   '📤 Kitob yuklanmoqda...',
+    pdfAdded:       '✅ PDF shaxsiy kutubxonangizga qo‘shildi! Saytdagi kabinetingizda o‘qishingiz mumkin. 📚',
+    btnOpenLib:     '📚 Kutubxonani ochish',
   },
   ru: {
     langSelect:     '🌐 <b>Выберите язык:</b>',
@@ -203,6 +208,11 @@ const MSGS = {
     libLimit:       '⚠️ Достигнут бесплатный лимит. Оформите /premium.',
     libNotLinked:   '🔗 Сначала привяжите аккаунт — команда /link.',
     libError:       '😔 Не удалось добавить. Попробуйте позже.',
+    pdfOnly:        '📄 Отправьте только PDF-файл.',
+    pdfTooBig:      '⚠️ Файл больше 20MB. Бот принимает до 20MB.',
+    pdfUploading:   '📤 Загружаю книгу...',
+    pdfAdded:       '✅ PDF добавлен в вашу библиотеку! Читайте в личном кабинете на сайте. 📚',
+    btnOpenLib:     '📚 Открыть библиотеку',
   },
   en: {
     langSelect:     '🌐 <b>Select language:</b>',
@@ -269,6 +279,11 @@ const MSGS = {
     libLimit:       '⚠️ Free limit reached. Upgrade via /premium.',
     libNotLinked:   '🔗 Link your account first — use /link.',
     libError:       '😔 Could not add. Try again later.',
+    pdfOnly:        '📄 Please send a PDF file.',
+    pdfTooBig:      '⚠️ File is larger than 20MB. The bot accepts up to 20MB.',
+    pdfUploading:   '📤 Uploading the book...',
+    pdfAdded:       '✅ PDF added to your library! Read it in your account on the site. 📚',
+    btnOpenLib:     '📚 Open library',
   }
 };
 
@@ -1146,6 +1161,9 @@ bot.on('callback_query', async (query) => {
 // MAIN MESSAGE HANDLER
 // ─────────────────────────────────────────────────────────────────────────────
 bot.on('message', async (msg) => {
+  // PDF upload → add to the linked account's personal library.
+  if (msg.document) { await handleDocument(msg); return; }
+
   if (!msg.text || msg.text.startsWith('/')) return;
 
   const chatId = msg.chat.id;
@@ -1223,6 +1241,53 @@ async function runSearch(chatId, state, query) {
     await bot.editMessageText(errText, {
       chat_id: chatId, message_id: loadMsg.message_id
     }).catch(() => bot.sendMessage(chatId, errText));
+  }
+}
+
+// ── Handle uploaded PDF documents ──────────────────────────────────────────────
+async function handleDocument(msg) {
+  const chatId = msg.chat.id;
+  const state = getState(chatId);
+  const { lang } = state;
+  if (!(await passChannelGate(chatId, msg.from.id, lang))) return;
+
+  const doc = msg.document;
+  const name = doc.file_name || '';
+  const isPdf = doc.mime_type === 'application/pdf' || /\.pdf$/i.test(name);
+  if (!isPdf) { await bot.sendMessage(chatId, t(lang, 'pdfOnly')).catch(() => {}); return; }
+  // Telegram bots can only download files up to 20MB via getFile.
+  if (doc.file_size && doc.file_size > 20 * 1024 * 1024) {
+    await bot.sendMessage(chatId, t(lang, 'pdfTooBig')).catch(() => {});
+    return;
+  }
+
+  const loadMsg = await bot.sendMessage(chatId, t(lang, 'pdfUploading'));
+  const title = (msg.caption || name.replace(/\.pdf$/i, '') || 'PDF kitob').slice(0, 300);
+  try {
+    const resp = await apiPost('/telegram/library/upload', {
+      telegramId: msg.from.id,
+      fileId: doc.file_id,
+      fileName: name || 'book.pdf',
+      fileSize: doc.file_size || 0,
+      title
+    });
+    await bot.deleteMessage(chatId, loadMsg.message_id).catch(() => {});
+    if (resp.linked === false) {
+      await bot.sendMessage(chatId, t(lang, 'libNotLinked')).catch(() => {});
+    } else if (resp.added) {
+      await bot.sendMessage(chatId, t(lang, 'pdfAdded'), {
+        reply_markup: { inline_keyboard: [[{ text: t(lang, 'btnOpenLib'), url: `${FRONTEND}/library` }]] }
+      }).catch(() => {});
+    } else if (resp.limit) {
+      await bot.sendMessage(chatId, t(lang, 'libLimit')).catch(() => {});
+    } else {
+      await bot.sendMessage(chatId, t(lang, 'libError')).catch(() => {});
+    }
+  } catch (err) {
+    console.error('PDF upload error:', err.message);
+    await bot.editMessageText(t(lang, 'libError'), {
+      chat_id: chatId, message_id: loadMsg.message_id
+    }).catch(() => {});
   }
 }
 

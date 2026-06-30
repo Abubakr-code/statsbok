@@ -14,6 +14,52 @@ const TAB_LABELS = {
   quotes: { uz: 'Statalar', en: 'Quotes', ru: 'Цитаты' }
 };
 
+// Local strings for this page (kept inline to avoid scattering across i18n).
+const L = {
+  uz: {
+    pages: 'sahifa', minutes: 'daqiqa', bet: 'bet',
+    addSession: "O'qish sessiyasi qo'shish", pagesRead: "O'qilgan sahifalar",
+    readTime: "O'qish vaqti (daqiqa)", currentPage: 'Joriy sahifa', save: 'Saqlash',
+    recentSessions: 'Oxirgi sessiyalar', insightPh: 'Muhim fikr yoki tushuncha...',
+    pageOpt: 'Sahifa (ixtiyoriy)', add: "Qo'shish", noInsights: "Hali tushuncha yo'q",
+    rating: 'Baho', reviewLabel: 'Taqriz', freeMax: '(max 500 belgi bepul)',
+    reviewPh: 'Kitob haqida fikrlaringiz...', makePublic: '🌐 Ommaga ochish',
+    makePrivate: '🔒 Yopish', publicLink: 'Ommaviy havola:', copy: 'Nusxa',
+    quotesHint: 'Shu kitob statalarini StatBooks bazasidan qidirish:', searchOn: 'StatBooks da qidirish →',
+    readPdf: '📖 PDF o‘qish', pageSaved: 'Sahifa yangilandi', sessionSaved: "O'qish sessiyasi saqlandi",
+    insightSaved: 'Tushuncha saqlandi', reviewLong: 'Taqriz 500 belgidan oshdi (Premium kerak)',
+    reviewOpened: 'Taqriz ommaga ochildi', reviewClosed: 'Taqriz yopildi', premiumOnly: 'Bu funksiya Premium uchun'
+  },
+  ru: {
+    pages: 'стр.', minutes: 'мин', bet: 'стр.',
+    addSession: 'Добавить сессию чтения', pagesRead: 'Прочитано страниц',
+    readTime: 'Время чтения (мин)', currentPage: 'Текущая страница', save: 'Сохранить',
+    recentSessions: 'Последние сессии', insightPh: 'Важная мысль или заметка...',
+    pageOpt: 'Страница (необяз.)', add: 'Добавить', noInsights: 'Пока нет заметок',
+    rating: 'Оценка', reviewLabel: 'Рецензия', freeMax: '(до 500 символов бесплатно)',
+    reviewPh: 'Ваши мысли о книге...', makePublic: '🌐 Опубликовать',
+    makePrivate: '🔒 Скрыть', publicLink: 'Публичная ссылка:', copy: 'Копировать',
+    quotesHint: 'Искать цитаты этой книги в базе StatBooks:', searchOn: 'Искать в StatBooks →',
+    readPdf: '📖 Читать PDF', pageSaved: 'Страница обновлена', sessionSaved: 'Сессия сохранена',
+    insightSaved: 'Заметка сохранена', reviewLong: 'Рецензия больше 500 символов (нужен Premium)',
+    reviewOpened: 'Рецензия опубликована', reviewClosed: 'Рецензия скрыта', premiumOnly: 'Функция только для Premium'
+  },
+  en: {
+    pages: 'pages', minutes: 'min', bet: 'p.',
+    addSession: 'Add reading session', pagesRead: 'Pages read',
+    readTime: 'Reading time (min)', currentPage: 'Current page', save: 'Save',
+    recentSessions: 'Recent sessions', insightPh: 'An important thought or note...',
+    pageOpt: 'Page (optional)', add: 'Add', noInsights: 'No insights yet',
+    rating: 'Rating', reviewLabel: 'Review', freeMax: '(max 500 chars free)',
+    reviewPh: 'Your thoughts about the book...', makePublic: '🌐 Make public',
+    makePrivate: '🔒 Make private', publicLink: 'Public link:', copy: 'Copy',
+    quotesHint: 'Search this book\'s quotes in the StatBooks database:', searchOn: 'Search on StatBooks →',
+    readPdf: '📖 Read PDF', pageSaved: 'Page updated', sessionSaved: 'Reading session saved',
+    insightSaved: 'Insight saved', reviewLong: 'Review over 500 chars (Premium required)',
+    reviewOpened: 'Review made public', reviewClosed: 'Review hidden', premiumOnly: 'This feature is Premium only'
+  }
+};
+
 function StarSelect({ value, onChange }) {
   return (
     <div className="flex gap-1">
@@ -31,6 +77,7 @@ export default function LibraryBookDetail() {
   const { isPremium } = useAuth();
   const navigate = useNavigate();
   const showToast = useToastStore((s) => s.show);
+  const x = L[lang] || L.uz;
 
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -61,7 +108,7 @@ export default function LibraryBookDetail() {
     try {
       const { data } = await api.patch(`/library/${id}/progress`, { currentPage: parseInt(newPage) });
       setBook(data.book); setNewPage('');
-      showToast('Sahifa yangilandi', 'success');
+      showToast(x.pageSaved, 'success');
     } catch { showToast(t('toast.error'), 'error'); }
   }
 
@@ -74,7 +121,7 @@ export default function LibraryBookDetail() {
         currentPage: newPage ? parseInt(newPage) : undefined
       });
       setBook(data.book); setSessionPages(''); setSessionMins(''); setNewPage('');
-      showToast("O'qish sessiyasi saqlandi", 'success');
+      showToast(x.sessionSaved, 'success');
     } catch { showToast(t('toast.error'), 'error'); }
   }
 
@@ -86,7 +133,7 @@ export default function LibraryBookDetail() {
         pageNumber: insightPage ? parseInt(insightPage) : undefined
       });
       setBook(data.book); setInsightText(''); setInsightPage('');
-      showToast('Tushuncha saqlandi', 'success');
+      showToast(x.insightSaved, 'success');
     } catch (err) {
       if (err.response?.data?.error === 'insight_limit_reached') {
         showToast(t('library.freeLimit'), 'error');
@@ -109,7 +156,7 @@ export default function LibraryBookDetail() {
       showToast(t('toast.saved'), 'success');
     } catch (err) {
       if (err.response?.data?.error === 'review_too_long') {
-        showToast('Taqriz 500 belgidan oshib ketdi (Premium kerak)', 'error');
+        showToast(x.reviewLong, 'error');
       } else showToast(t('toast.error'), 'error');
     } finally { setReviewSaving(false); }
   }
@@ -118,9 +165,9 @@ export default function LibraryBookDetail() {
     try {
       const { data } = await api.patch(`/library/${id}/review/toggle`);
       setBook((b) => ({ ...b, review: { ...b.review, isPublic: data.isPublic } }));
-      showToast(data.isPublic ? 'Taqriz ommaga ochildi' : 'Taqriz yopildi', 'success');
+      showToast(data.isPublic ? x.reviewOpened : x.reviewClosed, 'success');
     } catch (err) {
-      if (err.response?.data?.error === 'premium_required') showToast('Bu funksiya Premium uchun', 'error');
+      if (err.response?.data?.error === 'premium_required') showToast(x.premiumOnly, 'error');
       else showToast(t('toast.error'), 'error');
     }
   }
@@ -162,7 +209,17 @@ export default function LibraryBookDetail() {
             </div>
           )}
           {book.totalPages && (
-            <p className="text-xs text-parchment-faint mt-2">{book.currentPage || 0}/{book.totalPages} sahifa</p>
+            <p className="text-xs text-parchment-faint mt-2">{book.currentPage || 0}/{book.totalPages} {x.pages}</p>
+          )}
+          {book.pdfFileId && (
+            <a
+              href={`/api/library/${book._id}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary mt-4 flex w-full items-center justify-center gap-2 py-2 text-sm"
+            >
+              {x.readPdf}
+            </a>
           )}
         </div>
 
@@ -183,7 +240,7 @@ export default function LibraryBookDetail() {
               {book.totalPages && (
                 <div>
                   <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-parchment-dim">{book.currentPage}/{book.totalPages} sahifa</span>
+                    <span className="text-parchment-dim">{book.currentPage}/{book.totalPages} {x.pages}</span>
                     <span className="text-amber font-medium">{progress}%</span>
                   </div>
                   <div className="h-3 rounded-full bg-ink-700">
@@ -192,38 +249,38 @@ export default function LibraryBookDetail() {
                 </div>
               )}
               <div className="card space-y-3">
-                <h3 className="text-sm font-medium text-parchment">O'qish sessiyasi qo'shish</h3>
+                <h3 className="text-sm font-medium text-parchment">{x.addSession}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-parchment-faint mb-1 block">O'qilgan sahifalar</label>
+                    <label className="text-xs text-parchment-faint mb-1 block">{x.pagesRead}</label>
                     <input type="number" value={sessionPages} onChange={(e) => setSessionPages(e.target.value)}
                       className="w-full rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-parchment outline-none focus:border-amber" />
                   </div>
                   <div>
-                    <label className="text-xs text-parchment-faint mb-1 block">O'qish vaqti (daqiqa)</label>
+                    <label className="text-xs text-parchment-faint mb-1 block">{x.readTime}</label>
                     <input type="number" value={sessionMins} onChange={(e) => setSessionMins(e.target.value)}
                       className="w-full rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-parchment outline-none focus:border-amber" />
                   </div>
                   <div>
-                    <label className="text-xs text-parchment-faint mb-1 block">Joriy sahifa</label>
+                    <label className="text-xs text-parchment-faint mb-1 block">{x.currentPage}</label>
                     <input type="number" value={newPage} onChange={(e) => setNewPage(e.target.value)}
                       className="w-full rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-parchment outline-none focus:border-amber" />
                   </div>
                   <div className="flex items-end">
-                    <button onClick={logSession} className="btn-primary w-full py-2 text-sm">Saqlash</button>
+                    <button onClick={logSession} className="btn-primary w-full py-2 text-sm">{x.save}</button>
                   </div>
                 </div>
               </div>
 
               {recentSessions.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-parchment mb-3">Oxirgi sessiyalar</h3>
+                  <h3 className="text-sm font-medium text-parchment mb-3">{x.recentSessions}</h3>
                   <div className="space-y-2">
                     {recentSessions.map((s, i) => (
                       <div key={i} className="flex items-center justify-between text-sm border-b border-ink-700 pb-2">
                         <span className="text-parchment-faint">{new Date(s.date).toLocaleDateString()}</span>
-                        <span className="text-parchment">{s.pagesRead} sahifa</span>
-                        <span className="text-parchment-faint">{s.minutesRead} daqiqa</span>
+                        <span className="text-parchment">{s.pagesRead} {x.pages}</span>
+                        <span className="text-parchment-faint">{s.minutesRead} {x.minutes}</span>
                       </div>
                     ))}
                   </div>
@@ -237,23 +294,23 @@ export default function LibraryBookDetail() {
             <div className="space-y-4">
               <div className="card space-y-3">
                 <textarea value={insightText} onChange={(e) => setInsightText(e.target.value)}
-                  rows={3} placeholder="Muhim fikr yoki tushuncha..."
+                  rows={3} placeholder={x.insightPh}
                   className="w-full resize-none rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-parchment placeholder-parchment-faint outline-none focus:border-amber" />
                 <div className="flex gap-3 items-center">
                   <input type="number" value={insightPage} onChange={(e) => setInsightPage(e.target.value)}
-                    placeholder="Sahifa (ixtiyoriy)"
+                    placeholder={x.pageOpt}
                     className="w-32 rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-parchment outline-none focus:border-amber" />
-                  <button onClick={addInsight} className="btn-primary px-4 py-2 text-sm">Qo'shish</button>
+                  <button onClick={addInsight} className="btn-primary px-4 py-2 text-sm">{x.add}</button>
                 </div>
               </div>
               {(book.insights || []).length === 0 && (
-                <p className="text-sm text-parchment-faint text-center py-6">Hali tushuncha yo'q</p>
+                <p className="text-sm text-parchment-faint text-center py-6">{x.noInsights}</p>
               )}
               <div className="space-y-3">
                 {[...(book.insights || [])].reverse().map((ins) => (
                   <div key={ins._id} className="card flex items-start gap-3">
                     {ins.pageNumber && (
-                      <span className="text-xs text-amber font-mono flex-shrink-0 mt-1">{ins.pageNumber}-bet</span>
+                      <span className="text-xs text-amber font-mono flex-shrink-0 mt-1">{ins.pageNumber}-{x.bet}</span>
                     )}
                     <p className="flex-1 text-sm text-parchment leading-relaxed">{ins.text}</p>
                     <button onClick={() => deleteInsight(ins._id)}
@@ -272,7 +329,7 @@ export default function LibraryBookDetail() {
           {tab === 'review' && (
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-parchment-faint mb-1 block">Baho</label>
+                <label className="text-xs text-parchment-faint mb-1 block">{x.rating}</label>
                 <StarSelect value={book.rating} onChange={async (r) => {
                   const { data } = await api.put(`/library/${id}`, { rating: r });
                   setBook(data.book);
@@ -280,32 +337,32 @@ export default function LibraryBookDetail() {
               </div>
               <div>
                 <label className="text-xs text-parchment-faint mb-2 block">
-                  Taqriz {!isPremium && <span className="text-amber">(max 500 belgi bepul)</span>}
+                  {x.reviewLabel} {!isPremium && <span className="text-amber">{x.freeMax}</span>}
                 </label>
                 <textarea value={reviewText} onChange={(e) => setReviewText(e.target.value)}
-                  rows={8} placeholder="Kitob haqida fikrlaringiz..."
+                  rows={8} placeholder={x.reviewPh}
                   className="w-full resize-none rounded-xl border border-ink-600 bg-ink-800 px-4 py-3 text-sm text-parchment placeholder-parchment-faint outline-none focus:border-amber" />
                 {!isPremium && <p className="text-xs text-parchment-faint mt-1">{reviewText.length}/500</p>}
               </div>
               <div className="flex gap-3">
                 <button onClick={saveReview} disabled={reviewSaving} className="btn-primary px-6 py-2 text-sm">
-                  {reviewSaving ? '...' : 'Saqlash'}
+                  {reviewSaving ? '...' : x.save}
                 </button>
                 {isPremium && book.review?.text && (
                   <button onClick={toggleReviewPublic} className="btn-ghost px-4 py-2 text-sm">
-                    {book.review?.isPublic ? '🔒 Yopish' : '🌐 Ommaga ochish'}
+                    {book.review?.isPublic ? x.makePrivate : x.makePublic}
                   </button>
                 )}
               </div>
               {book.review?.isPublic && book.review?.publicSlug && (
                 <div className="card text-sm">
-                  <p className="text-parchment-faint mb-2">Ommaviy havola:</p>
+                  <p className="text-parchment-faint mb-2">{x.publicLink}</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 text-amber text-xs break-all">
                       /review/{book.review.publicSlug}
                     </code>
                     <button onClick={() => { navigator.clipboard?.writeText(window.location.origin + '/review/' + book.review.publicSlug); showToast(t('toast.copied'), 'info'); }}
-                      className="btn-ghost px-2 py-1 text-xs">Nusxa</button>
+                      className="btn-ghost px-2 py-1 text-xs">{x.copy}</button>
                   </div>
                 </div>
               )}
@@ -315,9 +372,9 @@ export default function LibraryBookDetail() {
           {/* QUOTES TAB */}
           {tab === 'quotes' && (
             <div className="py-8 text-center text-parchment-faint">
-              <p className="text-sm">StatBooks bazasida shu kitob statalarini qidirish uchun:</p>
+              <p className="text-sm">{x.quotesHint}</p>
               <Link to={`/search?q=${encodeURIComponent(book.title)}`} className="btn-ghost mt-3 inline-block px-4 py-2 text-sm">
-                StatBooks da qidirish →
+                {x.searchOn}
               </Link>
             </div>
           )}

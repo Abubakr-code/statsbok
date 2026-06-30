@@ -45,7 +45,12 @@ const libraryBookSchema = new mongoose.Schema({
   insights: [insightSchema],
   readingSessions: [readingSessionSchema],
   statbooksBookId: { type: mongoose.Schema.Types.ObjectId, ref: 'Book' },
-  source: { type: String, enum: ['isbn', 'search', 'manual', 'statbooks'], default: 'manual' }
+  source: { type: String, enum: ['isbn', 'search', 'manual', 'statbooks'], default: 'manual' },
+  // PDF uploaded via the Telegram bot. We keep Telegram's file_id (Telegram
+  // stores the file for free) and stream it on demand through the backend.
+  pdfFileId: { type: String, default: null },
+  pdfFileName: { type: String, default: null },
+  pdfFileSize: { type: Number, default: 0 }
 }, { timestamps: true });
 
 libraryBookSchema.index({ userId: 1, shelf: 1 });
