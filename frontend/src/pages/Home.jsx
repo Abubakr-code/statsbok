@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n';
 import api from '../services/api';
 import SearchBar from '../components/SearchBar';
 import BookPreviewModal from '../components/BookPreviewModal';
+import AiBookOracle from '../components/AiBookOracle';
 import { useAuth } from '../hooks/useAuth';
 import SEO from '../components/SEO';
 
@@ -46,181 +47,6 @@ function BookCover({ book, onClick }) {
         <p className="mt-0.5 text-xs text-amber/80">❤️ {book.likes}</p>
       )}
     </button>
-  );
-}
-
-function AiBookOracle({ t, lang }) {
-  const [question, setQuestion] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState(null); // { reply, books }
-  const [aiPreview, setAiPreview] = useState(null);
-  const inputRef = useRef(null);
-
-  async function ask(e) {
-    e?.preventDefault();
-    const q = question.trim();
-    if (!q || loading) return;
-    setLoading(true);
-    setResults(null);
-    try {
-      const { data } = await api.post('/ai/find-book', { question: q, lang });
-      setResults(data);
-    } catch {
-      setResults({ reply: t('ai.error'), books: [] });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function onKey(e) {
-    if (e.key === 'Enter') ask();
-  }
-
-  const CHIPS = t('ai.oracle.chips').split('|');
-
-  return (
-    <div className="mx-auto mt-10 w-full max-w-2xl">
-      {/* Header card */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber/20 bg-gradient-to-br from-amber/8 via-ink-800/80 to-ink-900 p-5 shadow-lg">
-        {/* Decorative glow */}
-        <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-amber/10 blur-2xl" />
-
-        <div className="relative flex items-start gap-3">
-          <span className="text-2xl select-none" aria-hidden>🔮</span>
-          <div>
-            <h3 className="font-display text-base text-parchment">{t('ai.oracle.heading')}</h3>
-            <p className="mt-1 text-sm leading-relaxed text-parchment-dim">{t('ai.oracle.desc')}</p>
-          </div>
-        </div>
-
-        {/* Chips */}
-        {!results && !loading && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {CHIPS.map((chip, i) => (
-              <button
-                key={i}
-                onClick={async () => {
-                  setQuestion(chip);
-                  setLoading(true);
-                  setResults(null);
-                  try {
-                    const { data } = await api.post('/ai/find-book', { question: chip, lang });
-                    setResults(data);
-                  } catch {
-                    setResults({ reply: t('ai.error'), books: [] });
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                className="rounded-full border border-amber/25 bg-amber/8 px-3 py-1 text-xs text-amber hover:bg-amber/15 transition-colors"
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Input */}
-        <div className="mt-4 flex gap-2">
-          <input
-            ref={inputRef}
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            onKeyDown={onKey}
-            placeholder={t('ai.oracle.placeholder')}
-            className="input flex-1 text-sm bg-ink-900/60 border-ink-500 focus:border-amber/50"
-            disabled={loading}
-          />
-          <button
-            onClick={ask}
-            disabled={loading || !question.trim()}
-            className="btn-primary flex shrink-0 items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-40"
-          >
-            {loading ? (
-              <span className="flex gap-1 items-center">
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink [animation-delay:-0.3s]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink [animation-delay:-0.15s]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink" />
-              </span>
-            ) : (
-              <>{t('ai.oracle.btn')} ✨</>
-            )}
-          </button>
-        </div>
-
-        {/* Results */}
-        {results && (
-          <div className="mt-5">
-            {results.reply && (
-              <div className="mb-4 flex gap-2">
-                <span className="text-lg select-none shrink-0" aria-hidden>🤖</span>
-                <p className="text-sm text-parchment-dim leading-relaxed">{results.reply}</p>
-              </div>
-            )}
-            {results.books && results.books.length > 0 ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {results.books.slice(0, 4).map((book, i) => (
-                  <AiBookCard key={i} book={book} t={t} onOpen={setAiPreview} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-parchment-faint text-center py-4">📭 {t('ai.oracle.noResult')}</p>
-            )}
-            <button
-              onClick={() => { setResults(null); setQuestion(''); }}
-              className="mt-4 text-xs text-parchment-faint hover:text-amber transition-colors"
-            >
-              ← {t('ai.oracle.back')}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {aiPreview && (
-        <BookPreviewModal
-          book={aiPreview}
-          highlightText={null}
-          onClose={() => setAiPreview(null)}
-        />
-      )}
-    </div>
-  );
-}
-
-function AiBookCard({ book, t, onOpen }) {
-  const [imgErr, setImgErr] = useState(false);
-  return (
-    <div className="group flex items-start gap-3 rounded-xl border border-amber/15 bg-ink-900/70 p-3 hover:border-amber/40 hover:bg-ink-800/80 transition-all duration-200 cursor-pointer"
-      onClick={() => onOpen({ id: book.id, title: book.title, author: book.author, coverImage: book.coverImage, affiliateLink: book.affiliateLink })}
-    >
-      {book.coverImage && !imgErr ? (
-        <img
-          src={book.coverImage}
-          alt={book.title}
-          className="h-20 w-14 shrink-0 rounded-lg object-cover shadow-md group-hover:shadow-amber/20 transition-shadow"
-          onError={() => setImgErr(true)}
-        />
-      ) : (
-        <div className="flex h-20 w-14 shrink-0 items-center justify-center rounded-lg bg-ink-700 border border-ink-600">
-          <span className="text-2xl" aria-hidden>📖</span>
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="line-clamp-2 text-sm font-medium text-parchment leading-snug group-hover:text-amber transition-colors">{book.title}</p>
-        <p className="mt-0.5 text-xs text-parchment-faint">✍️ {book.author}</p>
-        {book.page && (
-          <span className="mt-1.5 inline-block rounded-full bg-amber/15 px-2 py-0.5 text-xs font-medium text-amber">
-            📄 {book.page}-bet
-          </span>
-        )}
-        {book.reason && (
-          <p className="mt-1.5 line-clamp-2 text-xs text-parchment-dim leading-relaxed">{book.reason}</p>
-        )}
-        <p className="mt-2 text-xs font-medium text-amber/70 group-hover:text-amber transition-colors">
-          {t('search.preview')} →
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -298,7 +124,7 @@ export default function Home() {
           <div className="mx-auto mb-8 max-w-xl text-base text-parchment-dim sm:mb-10 sm:text-lg">{t('home.subtitle')}</div>
           <SearchBar onSearch={handleSearch} autoFocus />
 
-          <AiBookOracle t={t} lang={lang} />
+          <AiBookOracle />
 
           {isAuthenticated && books.length > 0 && (
             <div className="mx-auto mt-6 grid max-w-md grid-cols-2 gap-3 text-left">

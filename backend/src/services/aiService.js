@@ -191,9 +191,15 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
   if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
 
   const langInstruction = {
-    uz: "Javobni faqat O'ZBEK tilida bering (lotin yozuvi).",
-    en: 'Reply in ENGLISH only.',
-    ru: 'Отвечайте только на РУССКОМ языке.'
+    uz: "Reply ONLY in Uzbek (Latin script).",
+    en: 'Reply ONLY in English.',
+    ru: 'Reply ONLY in Russian.'
+  };
+
+  const noBookMsg = {
+    uz: "Bu mavzu bo'yicha hozircha mos kitob topilmadi.",
+    en: 'No matching book found for this topic yet.',
+    ru: 'Подходящая книга по этой теме пока не найдена.'
   };
 
   const seen = new Set();
@@ -204,29 +210,44 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
     const id = String(b.id || b._id || '');
     if (id && seen.has(id)) continue;
     if (id) seen.add(id);
-    bookList.push({ id, title: b.title || '', author: b.author || '', page: r.pageNumber || null, snippet: (r.text || '').slice(0, 120) });
+    bookList.push({
+      id,
+      title: b.title || '',
+      author: b.author || '',
+      page: r.pageNumber || null,
+      snippet: (r.text || '').slice(0, 120)
+    });
   }
   for (const b of topBooks.slice(0, 20)) {
     const id = String(b._id || '');
     if (seen.has(id)) continue;
     seen.add(id);
-    bookList.push({ id, title: b.title || '', author: b.author || '', page: null, snippet: (b.description || '').slice(0, 100) });
+    bookList.push({
+      id,
+      title: b.title || '',
+      author: b.author || '',
+      page: null,
+      snippet: (b.description || '').slice(0, 100)
+    });
   }
 
   const booksContext = bookList.length
-    ? bookList.map((b) => `ID:${b.id} | "${b.title}" - ${b.author}${b.snippet ? ` | ${b.snippet}` : ''}`).join('\n')
-    : "Hozircha kitoblar yo'q.";
+    ? bookList.map((b) => `ID:${b.id} | "${b.title}" by ${b.author}${b.snippet ? ` | ${b.snippet}` : ''}`).join('\n')
+    : 'No books available.';
+
+  const noBook = noBookMsg[lang] || noBookMsg.en;
+  const replyLang = langInstruction[lang] || langInstruction.en;
 
   const systemPrompt =
-    `Siz "StatBooks Oracle"siz — foydalanuvchi savol beradi, siz bazamizdagi kitoblardan eng mosini topasiz.\n` +
-    `${langInstruction[lang] || langInstruction.uz}\n\n` +
-    `Bazamizdagi kitoblar:\n${booksContext}\n\n` +
-    `QOIDALAR:\n` +
-    `1. FAQAT yuqoridagi ro'yxatdagi kitoblarni ishlating.\n` +
-    `2. Javobingizni QUYIDAGI JSON formatida bering (boshqa hech narsa yozmang):\n` +
-    `{"answer":"...", "books":[{"id":"...","title":"...","author":"...","page":null,"reason":"..."}]}\n` +
-    `3. Agar mos kitob yo'q: {"answer":"Bu mavzu bo'yicha bazamizda hozircha kitob yo'q.","books":[]}\n` +
-    `4. Javob qisqa (2-3 gap) bo'lsin.`;
+    `You are "StatBooks Oracle". A user asks a question; you find the most relevant book from the list below.\n` +
+    `${replyLang}\n\n` +
+    `AVAILABLE BOOKS:\n${booksContext}\n\n` +
+    `RULES:\n` +
+    `1. Use ONLY books from the list above.\n` +
+    `2. Respond STRICTLY in this JSON format (nothing else):\n` +
+    `{"answer":"...","books":[{"id":"...","title":"...","author":"...","page":null,"reason":"..."}]}\n` +
+    `3. If no book matches: {"answer":"${noBook}","books":[]}\n` +
+    `4. Keep "answer" brief (2-3 sentences). "reason" should explain why this book is relevant.`;
 
   const historySlice = (history || []).slice(-4).map((m) => ({
     role: m.role === 'assistant' ? 'assistant' : 'user',
@@ -239,7 +260,7 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
     { role: 'user', content: question }
   ];
 
-  const model = process.env.OPENROUTER_CHAT_MODEL || OPENROUTER_MODEL;
+  const model = process.env.OPENROUTER_CHAT_MODEL || process.env.OPENROUTER_MODEL || FREE_MODEL_FALLBACKS[0];
   const candidates = [model, ...FREE_MODEL_FALLBACKS.filter((m) => m !== model)];
 
   for (const m of candidates) {
