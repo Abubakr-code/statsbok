@@ -67,8 +67,11 @@ const { detectLanguage } = require('../utils/languageDetector');
 // Only confirmed-working FREE models. We deliberately avoid 'openrouter/auto'
 // because it can route to a PAID model and incur charges. Everything here is free.
 const FREE_MODEL_FALLBACKS = [
-  'google/gemma-4-31b-it:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
+  'deepseek/deepseek-chat-v3-0324:free',
+  'meta-llama/llama-4-scout:free',
+  'qwen/qwen3-235b-a22b:free',
+  'nvidia/llama-3.1-nemotron-ultra-253b:free',
+  'google/gemma-3-27b-it:free',
 ];
 
 function modelCandidates() {

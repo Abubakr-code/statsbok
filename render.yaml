@@ -30,15 +30,15 @@ services:
       - key: OPENROUTER_API_KEY
         sync: false
       - key: OPENROUTER_MODEL
-        value: google/gemma-4-31b-it:free
+        value: deepseek/deepseek-chat-v3-0324:free
       - key: OPENROUTER_SEARCH_API_KEY
         sync: false
       - key: OPENROUTER_SEARCH_MODEL
-        value: google/gemma-4-31b-it:free
+        value: deepseek/deepseek-chat-v3-0324:free
       - key: OPENROUTER_CHAT_API_KEY
         sync: false
       - key: OPENROUTER_CHAT_MODEL
-        value: nvidia/nemotron-3-super-120b-a12b:free
+        value: deepseek/deepseek-chat-v3-0324:free
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
