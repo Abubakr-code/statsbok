@@ -11,7 +11,6 @@ import Toast from './components/Toast';
 import Home from './pages/Home';
 import SearchResults from './pages/SearchResults';
 import Archive from './pages/Archive';
-import Premium from './pages/Premium';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Verify from './pages/Verify';
@@ -86,7 +85,7 @@ function MainApp() {
               </ProtectedRoute>
             }
           />
-          <Route path="/premium"         element={<Premium />} />
+          <Route path="/premium"         element={<Navigate to="/" replace />} />
           <Route path="/login"           element={<Login />} />
           <Route path="/register"        element={<Register />} />
           <Route path="/verify"          element={<Verify />} />

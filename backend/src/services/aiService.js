@@ -182,4 +182,110 @@ async function moodSearch(mood, lang = 'en') {
   return callClaude(system, `I want something about: ${mood}`);
 }
 
-module.exports = { recommend, context, moodSearch, chat };
+/**
+ * Book Oracle: given a user question + DB context, finds the best book(s).
+ * Returns { reply: string, books: Array }
+ */
+async function findBookForQuestion(question, history = [], dbResults = [], topBooks = [], lang = 'uz') {
+  const apiKey = process.env.OPENROUTER_CHAT_API_KEY || process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
+
+  const langInstruction = {
+    uz: "Javobni faqat O'ZBEK tilida bering (lotin yozuvi).",
+    en: 'Reply in ENGLISH only.',
+    ru: 'Отвечайте только на РУССКОМ языке.'
+  };
+
+  const seen = new Set();
+  const bookList = [];
+  for (const r of dbResults.slice(0, 8)) {
+    const b = r.book;
+    if (!b) continue;
+    const id = String(b.id || b._id || '');
+    if (id && seen.has(id)) continue;
+    if (id) seen.add(id);
+    bookList.push({ id, title: b.title || '', author: b.author || '', page: r.pageNumber || null, snippet: (r.text || '').slice(0, 120) });
+  }
+  for (const b of topBooks.slice(0, 20)) {
+    const id = String(b._id || '');
+    if (seen.has(id)) continue;
+    seen.add(id);
+    bookList.push({ id, title: b.title || '', author: b.author || '', page: null, snippet: (b.description || '').slice(0, 100) });
+  }
+
+  const booksContext = bookList.length
+    ? bookList.map((b) => `ID:${b.id} | "${b.title}" - ${b.author}${b.snippet ? ` | ${b.snippet}` : ''}`).join('\n')
+    : "Hozircha kitoblar yo'q.";
+
+  const systemPrompt =
+    `Siz "StatBooks Oracle"siz — foydalanuvchi savol beradi, siz bazamizdagi kitoblardan eng mosini topasiz.\n` +
+    `${langInstruction[lang] || langInstruction.uz}\n\n` +
+    `Bazamizdagi kitoblar:\n${booksContext}\n\n` +
+    `QOIDALAR:\n` +
+    `1. FAQAT yuqoridagi ro'yxatdagi kitoblarni ishlating.\n` +
+    `2. Javobingizni QUYIDAGI JSON formatida bering (boshqa hech narsa yozmang):\n` +
+    `{"answer":"...", "books":[{"id":"...","title":"...","author":"...","page":null,"reason":"..."}]}\n` +
+    `3. Agar mos kitob yo'q: {"answer":"Bu mavzu bo'yicha bazamizda hozircha kitob yo'q.","books":[]}\n` +
+    `4. Javob qisqa (2-3 gap) bo'lsin.`;
+
+  const historySlice = (history || []).slice(-4).map((m) => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: String(m.content || '').slice(0, 600)
+  }));
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...historySlice,
+    { role: 'user', content: question }
+  ];
+
+  const model = process.env.OPENROUTER_CHAT_MODEL || OPENROUTER_MODEL;
+  const candidates = [model, ...FREE_MODEL_FALLBACKS.filter((m) => m !== model)];
+
+  for (const m of candidates) {
+    let res;
+    try {
+      res = await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${apiKey}`,
+          'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
+          'X-Title': 'StatBooks'
+        },
+        body: JSON.stringify({ model: m, max_tokens: 700, messages })
+      });
+    } catch { continue; }
+
+    if (!res.ok) continue;
+    const data = await res.json();
+    const raw = (data.choices?.[0]?.message?.content || '').trim();
+    if (!raw) continue;
+
+    let parsed;
+    for (const c of [raw, raw.replace(/^```json?\s*/i, '').replace(/\s*```$/, ''), (raw.match(/\{[\s\S]*\}/) || [''])[0]]) {
+      try { parsed = JSON.parse(c); break; } catch { /* try next */ }
+    }
+    if (!parsed) continue;
+
+    const books = (Array.isArray(parsed.books) ? parsed.books : []).map((b) => {
+      const dbBook =
+        dbResults.map((r) => r.book).find((bk) => bk && String(bk.id || bk._id) === String(b.id)) ||
+        topBooks.find((bk) => String(bk._id) === String(b.id));
+      return {
+        id: b.id || null,
+        title: b.title || dbBook?.title || '',
+        author: b.author || dbBook?.author || '',
+        page: b.page || null,
+        reason: b.reason || '',
+        coverImage: dbBook?.coverImage || null,
+        affiliateLink: dbBook?.affiliateLink || null
+      };
+    }).filter((b) => b.title);
+
+    return { reply: parsed.answer || '', books };
+  }
+  throw new Error('Book Oracle: all models unavailable');
+}
+
+module.exports = { recommend, context, moodSearch, chat, findBookForQuestion };

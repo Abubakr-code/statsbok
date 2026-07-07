@@ -1,4 +1,6 @@
 const ai = require('../services/aiService');
+const { searchQuotesEnhanced } = require('../services/searchService');
+const Book = require('../models/Book');
 
 async function recommend(req, res, next) {
   try {
@@ -43,4 +45,23 @@ async function chat(req, res, next) {
   }
 }
 
-module.exports = { recommend, context, moodSearch, chat };
+async function findBook(req, res, next) {
+  try {
+    const { question, messages, lang } = req.body;
+    const q = question || (Array.isArray(messages) && messages.length ? messages[messages.length - 1].content : '');
+    if (!q || !String(q).trim()) return res.status(400).json({ error: 'question is required' });
+
+    const resolvedLang = lang || 'uz';
+    const [dbResults, topBooks] = await Promise.all([
+      searchQuotesEnhanced(q, resolvedLang).catch(() => []),
+      Book.find({}).sort({ likes: -1, totalQuotes: -1 }).limit(40).lean().catch(() => [])
+    ]);
+
+    const result = await ai.findBookForQuestion(q, messages || [], dbResults, topBooks, resolvedLang);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { recommend, context, moodSearch, chat, findBook };

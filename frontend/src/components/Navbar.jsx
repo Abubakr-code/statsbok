@@ -3,7 +3,6 @@ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useI18n, LANGS, LANG_LABELS } from '../i18n';
 import { useAuth } from '../hooks/useAuth';
 import { useThemeStore } from '../store/themeStore';
-import PremiumBadge from './PremiumBadge';
 import Avatar from './Avatar';
 
 function ThemeToggle() {
@@ -54,7 +53,7 @@ export default function Navbar() {
   const t = useI18n((s) => s.t);
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, isPremium, logout, user } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Close the mobile menu whenever the route changes.
@@ -111,16 +110,11 @@ export default function Navbar() {
               {t('nav.library')}
             </NavLink>
           )}
-          <NavLink to="/premium" className={linkClass}>
-            {t('nav.premium')}
-          </NavLink>
-
           <LangSwitcher />
           <ThemeToggle />
 
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
-              {isPremium && <PremiumBadge />}
               <Link
                 to="/profile"
                 className="flex items-center gap-2 text-sm text-parchment-dim transition-colors hover:text-amber"
@@ -198,9 +192,6 @@ export default function Navbar() {
                   {t('nav.library')}
                 </NavLink>
               )}
-              <NavLink to="/premium" className={mobileLinkClass}>
-                {t('nav.premium')}
-              </NavLink>
               {isAuthenticated && (
                 <NavLink to="/profile" className={mobileLinkClass}>
                   {t('nav.profile')}
@@ -216,7 +207,6 @@ export default function Navbar() {
             {isAuthenticated ? (
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm text-parchment-dim">
-                  {isPremium && <PremiumBadge />}
                   <span className="truncate">{user?.name || user?.email || user?.phone}</span>
                 </div>
                 <button onClick={handleLogout} className="btn-ghost px-3 py-2 text-sm">
