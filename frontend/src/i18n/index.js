@@ -139,6 +139,9 @@ const dict = {
     'ai.open': 'Kitob Oracle',
     'ai.error': "AI hozir javob bera olmadi. Birozdan so'ng urinib ko'ring.",
     'ai.disabled': 'AI hali sozlanmagan (OPENROUTER_API_KEY kerak).',
+    'ai.oracle.label': 'Kitob Oracle — savol ber, kitobdan javob top',
+    'ai.oracle.placeholder': 'Masalan: O\'rta asrlar tarixi, Navoiy she\'rlari...',
+    'ai.oracle.btn': 'Savol ber',
 
     'nav.profile': 'Profil',
     'profile.title': 'Profil',
@@ -373,6 +376,9 @@ const dict = {
     'ai.open': 'Book Oracle',
     'ai.error': 'The AI could not respond right now. Please try again shortly.',
     'ai.disabled': 'AI is not configured yet (OPENROUTER_API_KEY required).',
+    'ai.oracle.label': 'Book Oracle — ask a question, get the answer from a book',
+    'ai.oracle.placeholder': 'e.g. Middle Ages history, Napoleon\'s campaigns...',
+    'ai.oracle.btn': 'Ask AI',
 
     'nav.profile': 'Profile',
     'profile.title': 'Profile',
@@ -608,6 +614,9 @@ const dict = {
     'ai.open': 'Книжный Оракул',
     'ai.error': 'ИИ сейчас не смог ответить. Попробуйте чуть позже.',
     'ai.disabled': 'ИИ ещё не настроен (нужен OPENROUTER_API_KEY).',
+    'ai.oracle.label': 'Книжный Оракул — задай вопрос, найди ответ в книге',
+    'ai.oracle.placeholder': 'напр. История средних веков, походы Наполеона...',
+    'ai.oracle.btn': 'Спросить',
 
     'nav.profile': 'Профиль',
     'profile.title': 'Профиль',
