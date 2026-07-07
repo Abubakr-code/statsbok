@@ -68,6 +68,7 @@ const userSchema = new mongoose.Schema(
       widgetClicks: { type: Number, default: 0 },
     },
     // Account verification via a 6-digit email code.
+    followedBloggers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: [] }],
     verified: { type: Boolean, default: false },
     verificationCodeHash: { type: String, default: null },
     verificationExpires: { type: Date, default: null },

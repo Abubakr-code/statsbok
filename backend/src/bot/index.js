@@ -748,7 +748,7 @@ bot.onText(/\/top/, async (msg) => {
   const { lang } = state;
   const loadMsg = await bot.sendMessage(chatId, t(lang, 'topLoading'));
   try {
-    const data = await apiGet('/users/weekly-stats');
+    const data = await apiGet('/public/weekly-top');
     const stats = data.stats || [];
     if (!stats.length) {
       await bot.editMessageText(t(lang, 'topEmpty'), {

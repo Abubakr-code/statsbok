@@ -1,6 +1,8 @@
 const router = require('express').Router();
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Collection = require('../models/Collection');
+const { optionalAuth, requireAuth } = require('../middleware/auth');
 
 // ─── Public collection page ───────────────────────────────────────────────────
 router.get('/collection/:slug', async (req, res) => {
@@ -80,6 +82,115 @@ router.get('/widget/book/:bookId', async (req, res) => {
       .lean();
     res.json({ quotes });
   } catch {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ─── Weekly top quotes (public, used by Telegram bot /top) ───────────────────
+router.get('/weekly-top', async (req, res) => {
+  try {
+    const Quote = require('../models/Quote');
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const rows = await User.aggregate([
+      { $unwind: '$savedQuoteEvents' },
+      { $match: { 'savedQuoteEvents.savedAt': { $gte: weekAgo } } },
+      { $group: { _id: '$savedQuoteEvents.quote', saves: { $sum: 1 } } },
+      { $sort: { saves: -1 } },
+      { $limit: 10 }
+    ]);
+
+    const objectIds = rows
+      .map((r) => String(r._id))
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    const quotes = objectIds.length
+      ? await Quote.find({ _id: { $in: objectIds } }).populate('bookId').lean()
+      : [];
+    const quoteMap = new Map(quotes.map((q) => [String(q._id), q]));
+
+    const stats = rows.map((row) => {
+      const quote = quoteMap.get(String(row._id));
+      return {
+        quoteId: String(row._id),
+        saves: row.saves,
+        text: quote?.text || '',
+        book: quote?.bookId
+          ? {
+              id: quote.bookId._id,
+              title: quote.bookId.titleUz || quote.bookId.title,
+              author: quote.bookId.author,
+              coverImage: quote.bookId.coverImage || null
+            }
+          : null
+      };
+    }).filter((s) => s.text);
+
+    res.json({ stats });
+  } catch (err) {
+    console.error('weekly-top error', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ─── Blogger profile (public) ─────────────────────────────────────────────────
+router.get('/bloggers/:id', optionalAuth, async (req, res) => {
+  try {
+    const blogger = await User.findOne({ _id: req.params.id, isBlogger: true })
+      .select('name avatarUrl bio bloggerProfile createdAt')
+      .lean();
+    if (!blogger) return res.status(404).json({ error: 'not_found' });
+
+    const [collections, followerCount] = await Promise.all([
+      Collection.find({ blogger: blogger._id, isPublic: true })
+        .select('title slug views createdAt')
+        .sort({ views: -1 })
+        .limit(20)
+        .lean(),
+      User.countDocuments({ followedBloggers: blogger._id })
+    ]);
+
+    const isFollowing = req.user
+      ? (req.user.followedBloggers || []).some((id) => String(id) === String(blogger._id))
+      : false;
+
+    res.json({ blogger: { ...blogger, followerCount, collections, isFollowing } });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ─── Follow a blogger ─────────────────────────────────────────────────────────
+router.post('/bloggers/:id/follow', requireAuth, async (req, res) => {
+  try {
+    const bloggerId = req.params.id;
+    if (String(req.user._id) === String(bloggerId)) {
+      return res.status(400).json({ error: 'cannot_follow_self' });
+    }
+    const blogger = await User.findOne({ _id: bloggerId, isBlogger: true }).lean();
+    if (!blogger) return res.status(404).json({ error: 'not_found' });
+
+    await User.findByIdAndUpdate(req.user._id, {
+      $addToSet: { followedBloggers: bloggerId }
+    });
+
+    const followerCount = await User.countDocuments({ followedBloggers: bloggerId });
+    res.json({ following: true, followerCount });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ─── Unfollow a blogger ───────────────────────────────────────────────────────
+router.delete('/bloggers/:id/follow', requireAuth, async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user._id, {
+      $pull: { followedBloggers: req.params.id }
+    });
+    const followerCount = await User.countDocuments({ followedBloggers: req.params.id });
+    res.json({ following: false, followerCount });
+  } catch (err) {
     res.status(500).json({ error: 'server_error' });
   }
 });

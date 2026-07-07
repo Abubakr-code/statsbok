@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import SEO from '../components/SEO';
+import { useAuth } from '../hooks/useAuth';
 
 export default function BloggersLeaderboard() {
   const [bloggers, setBloggers] = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [followLoading, setFollowLoading] = useState({});
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     api.get('/public/bloggers')
@@ -13,6 +16,29 @@ export default function BloggersLeaderboard() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  async function toggleFollow(blogger) {
+    if (!isAuthenticated) return;
+    const id = blogger._id;
+    setFollowLoading((p) => ({ ...p, [id]: true }));
+    try {
+      const isFollowing = blogger._isFollowing;
+      const { data } = isFollowing
+        ? await api.delete(`/public/bloggers/${id}/follow`)
+        : await api.post(`/public/bloggers/${id}/follow`);
+      setBloggers((prev) =>
+        prev.map((b) =>
+          b._id === id
+            ? { ...b, _isFollowing: data.following, _followerCount: data.followerCount }
+            : b
+        )
+      );
+    } catch {
+      /* ignore */
+    } finally {
+      setFollowLoading((p) => ({ ...p, [id]: false }));
+    }
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -91,20 +117,38 @@ export default function BloggersLeaderboard() {
               )}
 
               {/* Stats */}
-              <div className="flex gap-4 text-xs text-parchment-faint border-t border-ink-600 pt-2">
+              <div className="flex flex-wrap gap-3 text-xs text-parchment-faint border-t border-ink-600 pt-2">
                 {bp.followers > 0 && (
                   <span>👥 {bp.followers.toLocaleString()} obunachi</span>
+                )}
+                {(b._followerCount ?? 0) > 0 && (
+                  <span>❤️ {(b._followerCount ?? 0).toLocaleString()} kuzatuvchi</span>
                 )}
                 {b.collectionsCount > 0 && (
                   <span>🎯 {b.collectionsCount} to'plam</span>
                 )}
+                {b.collectionsCount > 0 && b.totalCollectionViews > 0 && (
+                  <span>👁 {b.totalCollectionViews} ko'rilgan</span>
+                )}
               </div>
 
-              {/* Collections link */}
-              {b.collectionsCount > 0 && (
-                <p className="text-xs text-amber">
-                  {b.totalCollectionViews} marta ko'rilgan
-                </p>
+              {/* Follow button */}
+              {isAuthenticated && (
+                <button
+                  onClick={() => toggleFollow(b)}
+                  disabled={!!followLoading[b._id]}
+                  className={`w-full rounded-lg py-1.5 text-xs font-medium transition-all ${
+                    b._isFollowing
+                      ? 'border border-ink-500 bg-transparent text-parchment-faint hover:border-red-500/50 hover:text-red-400'
+                      : 'bg-amber/15 text-amber border border-amber/30 hover:bg-amber/25'
+                  } disabled:opacity-50`}
+                >
+                  {followLoading[b._id]
+                    ? '...'
+                    : b._isFollowing
+                    ? '✓ Kuzatilmoqda'
+                    : '+ Kuzatish'}
+                </button>
               )}
             </div>
           );
