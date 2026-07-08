@@ -59,7 +59,7 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_CHAT_API_KEY = process.env.OPENROUTER_CHAT_API_KEY || process.env.OPENROUTER_API_KEY;
 // Fast model for conversational chat widget
 const OPENROUTER_CHAT_MODEL =
-  process.env.OPENROUTER_CHAT_MODEL || process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat-v3-0324:free';
+  process.env.OPENROUTER_CHAT_MODEL || process.env.OPENROUTER_MODEL || 'openai/gpt-oss-20b:free';
 // Smarter model for Book Oracle (structured JSON + reasoning)
 const OPENROUTER_FIND_BOOK_MODEL =
   process.env.OPENROUTER_FIND_BOOK_MODEL || 'qwen/qwen3-235b-a22b:free';
@@ -70,22 +70,24 @@ const { detectLanguage } = require('../utils/languageDetector');
 // is busy or unavailable.
 // Only confirmed-working FREE models. We deliberately avoid 'openrouter/auto'
 // because it can route to a PAID model and incur charges. Everything here is free.
-// Fallbacks for chat widget (fast models first)
+// Fallbacks for chat widget (fast models first, last resort = openrouter/free)
 const FREE_MODEL_FALLBACKS = [
-  'deepseek/deepseek-chat-v3-0324:free',
+  'openai/gpt-oss-20b:free',
   'meta-llama/llama-4-scout:free',
-  'google/gemma-3-27b-it:free',
-  'qwen/qwen3-235b-a22b:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'google/gemma-4-31b-it:free',
   'nvidia/llama-3.1-nemotron-ultra-253b:free',
+  'openrouter/free', // always works — auto-picks any available free model
 ];
 
-// Fallbacks for Book Oracle (reasoning models first)
+// Fallbacks for Book Oracle (reasoning first, last resort = openrouter/free)
 const FIND_BOOK_FALLBACKS = [
   'qwen/qwen3-235b-a22b:free',
+  'openai/gpt-oss-120b:free',
   'deepseek/deepseek-r1:free',
-  'deepseek/deepseek-chat-v3-0324:free',
   'nvidia/llama-3.1-nemotron-ultra-253b:free',
-  'meta-llama/llama-4-scout:free',
+  'openai/gpt-oss-20b:free',
+  'openrouter/free',
 ];
 
 function modelCandidates() {
