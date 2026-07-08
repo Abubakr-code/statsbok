@@ -3,10 +3,42 @@ import api from '../services/api';
 import { useI18n } from '../i18n';
 import RichText from './RichText';
 
-/**
- * Floating book-assistant chat. Available on every page (bottom-right).
- * Talks to POST /api/ai/chat which is backed by a free OpenRouter model.
- */
+const SUGGESTIONS = {
+  uz: [
+    "📖 O'qishni qayerdan boshlasam?",
+    "🌹 Navoiy haqida ayting",
+    "💡 Eng yaxshi tarix kitoblari",
+    "🎯 Motivatsion kitob tavsiya",
+  ],
+  en: [
+    "📖 Where should I start reading?",
+    "💡 Best history books",
+    "🎯 Recommend a motivational book",
+    "✨ Classic novels to read",
+  ],
+  ru: [
+    "📖 С чего начать читать?",
+    "💡 Лучшие книги по истории",
+    "🎯 Посоветуй мотивирующую книгу",
+    "✨ Классика, которую стоит прочесть",
+  ],
+};
+
+function TypingDots() {
+  return (
+    <div className="mr-auto flex items-end gap-2 px-1">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber/20 text-base select-none">
+        📚
+      </span>
+      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-ink-700 px-4 py-3">
+        <span className="h-2 w-2 animate-bounce rounded-full bg-amber/70 [animation-delay:-0.3s]" />
+        <span className="h-2 w-2 animate-bounce rounded-full bg-amber/70 [animation-delay:-0.15s]" />
+        <span className="h-2 w-2 animate-bounce rounded-full bg-amber/70" />
+      </div>
+    </div>
+  );
+}
+
 export default function AiChat() {
   const t = useI18n((s) => s.t);
   const lang = useI18n((s) => s.lang);
@@ -14,39 +46,58 @@ export default function AiChat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [unread, setUnread] = useState(0);
   const scrollRef = useRef(null);
+  const inputRef = useRef(null);
   const mountedRef = useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
 
   const greeting = { role: 'assistant', content: t('ai.greeting') };
   const view = messages.length === 0 ? [greeting] : messages;
+  const suggestions = SUGGESTIONS[lang] || SUGGESTIONS.uz;
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   }, [messages, open, loading]);
 
-  async function send() {
-    const text = input.trim();
-    if (!text || loading) return;
-    const next = [...messages.length ? messages : [greeting], { role: 'user', content: text }];
+  useEffect(() => {
+    if (open) {
+      setUnread(0);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [open]);
+
+  async function sendText(text) {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
+    const history = messages.length ? messages : [greeting];
+    const next = [...history, { role: 'user', content: trimmed }];
     setMessages(next);
     setInput('');
     setLoading(true);
     try {
       const { data } = await api.post('/ai/chat', { messages: next, lang });
-      if (mountedRef.current) setMessages([...next, { role: 'assistant', content: data.reply || t('ai.error') }]);
+      if (!mountedRef.current) return;
+      const reply = data.reply || t('ai.error');
+      setMessages([...next, { role: 'assistant', content: reply }]);
+      if (!open) setUnread((n) => n + 1);
     } catch (err) {
+      if (!mountedRef.current) return;
       const status = err?.response?.status;
       const serverMsg = err?.response?.data?.message || '';
       const msg =
         status === 503 || /OPENROUTER|unavailable/i.test(serverMsg)
           ? t('ai.disabled')
           : t('ai.error');
-      if (mountedRef.current) setMessages([...next, { role: 'assistant', content: msg }]);
+      setMessages([...next, { role: 'assistant', content: msg }]);
     } finally {
       if (mountedRef.current) setLoading(false);
     }
   }
+
+  function send() { sendText(input); }
 
   function onKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -55,78 +106,140 @@ export default function AiChat() {
     }
   }
 
+  function clearChat() {
+    setMessages([]);
+    setInput('');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }
+
   return (
     <>
-      {/* Launcher */}
+      {/* Launcher button */}
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={t('ai.open')}
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-amber text-ink shadow-xl transition-transform hover:scale-105"
+        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-amber shadow-xl shadow-amber/30 transition-all duration-200 hover:scale-110 hover:shadow-amber/50 active:scale-95"
       >
         {open ? (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1814" strokeWidth="2.5">
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         ) : (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
+          <span className="text-2xl select-none" aria-hidden>📚</span>
+        )}
+        {!open && unread > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+            {unread}
+          </span>
         )}
       </button>
 
-      {/* Panel */}
+      {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-5 z-50 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-ink-600 bg-ink-800 shadow-2xl animate-fade-in">
-          <div className="flex items-center gap-3 border-b border-ink-600 bg-ink-700 px-4 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber/20 text-amber">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l2.4 5.2L20 8l-4 4 1 6-5-2.8L7 18l1-6-4-4 5.6-.8z" />
-              </svg>
+        <div className="fixed bottom-24 right-5 z-50 flex h-[32rem] w-[23rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-amber/20 bg-ink-900 shadow-2xl shadow-black/60 animate-fade-in">
+
+          {/* Header */}
+          <div className="flex items-center gap-3 border-b border-ink-700 bg-gradient-to-r from-ink-800 to-ink-900 px-4 py-3">
+            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber/20 text-xl">
+              📚
+              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-ink-900 bg-green-500" />
             </div>
-            <div>
-              <p className="font-display text-base text-parchment">{t('ai.title')}</p>
-              <p className="text-xs text-parchment-faint">{t('ai.subtitle')}</p>
+            <div className="flex-1 min-w-0">
+              <p className="font-display text-sm text-parchment">{t('ai.title')}</p>
+              <p className="text-xs text-green-400">● {t('ai.subtitle')}</p>
+            </div>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  onClick={clearChat}
+                  title="Tozalash"
+                  className="rounded-lg p-1.5 text-parchment-faint hover:bg-ink-700 hover:text-parchment transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                  </svg>
+                </button>
+              )}
+              <button
+                onClick={() => setOpen(false)}
+                className="rounded-lg p-1.5 text-parchment-faint hover:bg-ink-700 hover:text-parchment transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
             </div>
           </div>
 
-          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          {/* Messages */}
+          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 scroll-smooth">
             {view.map((m, i) => (
-              <div
-                key={i}
-                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
-                  m.role === 'user'
-                    ? 'ml-auto rounded-br-md bg-amber text-ink'
-                    : 'mr-auto rounded-bl-md bg-ink-700 text-parchment'
-                }`}
-              >
-                <RichText text={m.content} />
+              <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {m.role === 'assistant' && (
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber/20 text-base select-none">
+                    📚
+                  </span>
+                )}
+                <div
+                  className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
+                    m.role === 'user'
+                      ? 'rounded-br-sm bg-amber text-ink font-medium'
+                      : 'rounded-bl-sm bg-ink-800 text-parchment border border-ink-700'
+                  }`}
+                >
+                  <RichText text={m.content} />
+                </div>
+                {m.role === 'user' && (
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-700 text-base select-none">
+                    👤
+                  </span>
+                )}
               </div>
             ))}
-            {loading && (
-              <div className="mr-auto flex gap-1 rounded-2xl bg-ink-700 px-4 py-3">
-                <span className="h-2 w-2 animate-bounce rounded-full bg-parchment-faint [animation-delay:-0.3s]" />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-parchment-faint [animation-delay:-0.15s]" />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-parchment-faint" />
+
+            {loading && <TypingDots />}
+
+            {/* Suggestion chips — only before first user message */}
+            {messages.length === 0 && !loading && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => sendText(s)}
+                    className="rounded-full border border-amber/25 bg-amber/8 px-3 py-1 text-xs text-amber transition-colors hover:bg-amber/20"
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
             )}
           </div>
 
-          <div className="border-t border-ink-600 p-3">
+          {/* Input */}
+          <div className="border-t border-ink-700 bg-ink-900 p-3">
             <div className="flex items-end gap-2">
               <textarea
+                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={onKeyDown}
                 rows={1}
                 placeholder={t('ai.placeholder')}
-                className="input max-h-24 flex-1 resize-none py-2 text-sm"
+                className="input max-h-20 flex-1 resize-none py-2 text-sm bg-ink-800 border-ink-600 focus:border-amber/50"
               />
-              <button onClick={send} disabled={loading || !input.trim()} className="btn-primary px-3 py-2">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <button
+                onClick={send}
+                disabled={loading || !input.trim()}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber text-ink transition-all hover:bg-amber/90 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M22 2L11 13M22 2l-7 20-4-9-9-4z" />
                 </svg>
               </button>
             </div>
+            <p className="mt-1.5 text-center text-[10px] text-parchment-faint">
+              Enter — yuborish · Shift+Enter — yangi qator
+            </p>
           </div>
         </div>
       )}
