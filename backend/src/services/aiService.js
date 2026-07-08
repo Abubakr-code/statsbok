@@ -65,31 +65,23 @@ const OPENROUTER_FIND_BOOK_MODEL =
   process.env.OPENROUTER_FIND_BOOK_MODEL || 'qwen/qwen3-235b-a22b:free';
 const { detectLanguage } = require('../utils/languageDetector');
 
-// Free models are popular and get rate-limited (429) upstream. We try several
-// (from different providers) in order so the chat stays responsive when one
-// is busy or unavailable.
-// Only confirmed-working FREE models. We deliberately avoid 'openrouter/auto'
-// because it can route to a PAID model and incur charges. Everything here is free.
-// Fallbacks: try specific free models, always end with openrouter/free
+// Netlify proxy timeout = 26 seconds. We must finish ALL retries within ~22s.
+// Strategy: try fast models first (openrouter/free is quickest router),
+// limit to 3 attempts × 7s = 21s max for chat, 2 attempts × 10s = 20s for find-book.
 const FREE_MODEL_FALLBACKS = [
-  'openrouter/free',
-  'openai/gpt-oss-20b:free',
-  'meta-llama/llama-4-scout:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'google/gemma-4-31b-it:free',
+  'openrouter/free',           // fastest — auto-routes to best available free model
+  'openai/gpt-oss-20b:free',   // fast fallback
+  'meta-llama/llama-4-scout:free', // second fallback
 ];
 
 const FIND_BOOK_FALLBACKS = [
-  'qwen/qwen3-235b-a22b:free',
-  'openrouter/free',
-  'openai/gpt-oss-120b:free',
-  'deepseek/deepseek-r1:free',
-  'openai/gpt-oss-20b:free',
+  'openrouter/free',           // try first — fastest
+  'openai/gpt-oss-20b:free',   // second attempt
 ];
 
 function modelCandidates() {
   const list = [OPENROUTER_CHAT_MODEL, ...FREE_MODEL_FALLBACKS];
-  return [...new Set(list)];
+  return [...new Set(list)].slice(0, 3); // max 3 models × 7s = 21s
 }
 
 function bookAssistantSystemPrompt(lang) {
@@ -141,7 +133,7 @@ async function chat(messages, lang = 'en') {
   for (const model of modelCandidates()) {
     let res;
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 12000); // 12s per model
+    const timer = setTimeout(() => ac.abort(), 7000); // 7s per model × 3 models = 21s max
     try {
       res = await fetch(OPENROUTER_URL, {
         method: 'POST',
@@ -163,7 +155,9 @@ async function chat(messages, lang = 'en') {
 
     if (res.ok) {
       const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content;
+      // Strip <think>...</think> blocks that reasoning models expose
+      const raw = data.choices?.[0]?.message?.content || '';
+      const reply = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
       if (reply) return reply;
       lastError = 'Empty response';
       continue;
@@ -278,11 +272,13 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
     { role: 'user', content: question }
   ];
 
-  const model = OPENROUTER_FIND_BOOK_MODEL;
-  const candidates = [model, ...FIND_BOOK_FALLBACKS.filter((m) => m !== model)];
+  // Limit to 2 attempts × 10s = 20s max (Netlify proxy limit is 26s)
+  const candidates = [...new Set([...FIND_BOOK_FALLBACKS])].slice(0, 2);
 
   for (const m of candidates) {
     let res;
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 10000); // 10s per model
     try {
       res = await fetch(OPENROUTER_URL, {
         method: 'POST',
@@ -292,9 +288,11 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
           'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
           'X-Title': 'StatBooks'
         },
-        body: JSON.stringify({ model: m, max_tokens: 700, messages })
+        body: JSON.stringify({ model: m, max_tokens: 400, messages }),
+        signal: ac.signal
       });
-    } catch { continue; }
+    } catch { clearTimeout(timer); continue; }
+    clearTimeout(timer);
 
     if (!res.ok) continue;
     const data = await res.json();
