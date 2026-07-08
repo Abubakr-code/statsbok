@@ -57,8 +57,12 @@ function langName(lang) {
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_CHAT_API_KEY = process.env.OPENROUTER_CHAT_API_KEY || process.env.OPENROUTER_API_KEY;
+// Fast model for conversational chat widget
 const OPENROUTER_CHAT_MODEL =
-  process.env.OPENROUTER_CHAT_MODEL || process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free';
+  process.env.OPENROUTER_CHAT_MODEL || process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat-v3-0324:free';
+// Smarter model for Book Oracle (structured JSON + reasoning)
+const OPENROUTER_FIND_BOOK_MODEL =
+  process.env.OPENROUTER_FIND_BOOK_MODEL || 'qwen/qwen3-235b-a22b:free';
 const { detectLanguage } = require('../utils/languageDetector');
 
 // Free models are popular and get rate-limited (429) upstream. We try several
@@ -66,12 +70,22 @@ const { detectLanguage } = require('../utils/languageDetector');
 // is busy or unavailable.
 // Only confirmed-working FREE models. We deliberately avoid 'openrouter/auto'
 // because it can route to a PAID model and incur charges. Everything here is free.
+// Fallbacks for chat widget (fast models first)
 const FREE_MODEL_FALLBACKS = [
   'deepseek/deepseek-chat-v3-0324:free',
   'meta-llama/llama-4-scout:free',
+  'google/gemma-3-27b-it:free',
   'qwen/qwen3-235b-a22b:free',
   'nvidia/llama-3.1-nemotron-ultra-253b:free',
-  'google/gemma-3-27b-it:free',
+];
+
+// Fallbacks for Book Oracle (reasoning models first)
+const FIND_BOOK_FALLBACKS = [
+  'qwen/qwen3-235b-a22b:free',
+  'deepseek/deepseek-r1:free',
+  'deepseek/deepseek-chat-v3-0324:free',
+  'nvidia/llama-3.1-nemotron-ultra-253b:free',
+  'meta-llama/llama-4-scout:free',
 ];
 
 function modelCandidates() {
@@ -263,8 +277,8 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
     { role: 'user', content: question }
   ];
 
-  const model = process.env.OPENROUTER_CHAT_MODEL || process.env.OPENROUTER_MODEL || FREE_MODEL_FALLBACKS[0];
-  const candidates = [model, ...FREE_MODEL_FALLBACKS.filter((m) => m !== model)];
+  const model = OPENROUTER_FIND_BOOK_MODEL;
+  const candidates = [model, ...FIND_BOOK_FALLBACKS.filter((m) => m !== model)];
 
   for (const m of candidates) {
     let res;
