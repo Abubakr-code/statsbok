@@ -57,10 +57,10 @@ function langName(lang) {
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_CHAT_API_KEY = process.env.OPENROUTER_CHAT_API_KEY || process.env.OPENROUTER_API_KEY;
-// Fast model for conversational chat widget
+// openrouter/free = OpenRouter auto-picks the best available free model
+// No need to track individual model slugs — OpenRouter maintains this
 const OPENROUTER_CHAT_MODEL =
-  process.env.OPENROUTER_CHAT_MODEL || process.env.OPENROUTER_MODEL || 'openai/gpt-oss-20b:free';
-// Smarter model for Book Oracle (structured JSON + reasoning)
+  process.env.OPENROUTER_CHAT_MODEL || process.env.OPENROUTER_MODEL || 'openrouter/free';
 const OPENROUTER_FIND_BOOK_MODEL =
   process.env.OPENROUTER_FIND_BOOK_MODEL || 'qwen/qwen3-235b-a22b:free';
 const { detectLanguage } = require('../utils/languageDetector');
@@ -70,24 +70,21 @@ const { detectLanguage } = require('../utils/languageDetector');
 // is busy or unavailable.
 // Only confirmed-working FREE models. We deliberately avoid 'openrouter/auto'
 // because it can route to a PAID model and incur charges. Everything here is free.
-// Fallbacks for chat widget (fast models first, last resort = openrouter/free)
+// Fallbacks: try specific free models, always end with openrouter/free
 const FREE_MODEL_FALLBACKS = [
+  'openrouter/free',
   'openai/gpt-oss-20b:free',
   'meta-llama/llama-4-scout:free',
   'nvidia/nemotron-3-super-120b-a12b:free',
   'google/gemma-4-31b-it:free',
-  'nvidia/llama-3.1-nemotron-ultra-253b:free',
-  'openrouter/free', // always works — auto-picks any available free model
 ];
 
-// Fallbacks for Book Oracle (reasoning first, last resort = openrouter/free)
 const FIND_BOOK_FALLBACKS = [
   'qwen/qwen3-235b-a22b:free',
+  'openrouter/free',
   'openai/gpt-oss-120b:free',
   'deepseek/deepseek-r1:free',
-  'nvidia/llama-3.1-nemotron-ultra-253b:free',
   'openai/gpt-oss-20b:free',
-  'openrouter/free',
 ];
 
 function modelCandidates() {
@@ -144,7 +141,7 @@ async function chat(messages, lang = 'en') {
   for (const model of modelCandidates()) {
     let res;
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 18000); // 18s per model
+    const timer = setTimeout(() => ac.abort(), 12000); // 12s per model
     try {
       res = await fetch(OPENROUTER_URL, {
         method: 'POST',

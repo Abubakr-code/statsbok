@@ -30,15 +30,15 @@ services:
       - key: OPENROUTER_API_KEY
         sync: false
       - key: OPENROUTER_MODEL
-        value: openai/gpt-oss-20b:free
+        value: openrouter/free
       - key: OPENROUTER_SEARCH_API_KEY
         sync: false
       - key: OPENROUTER_SEARCH_MODEL
-        value: openai/gpt-oss-20b:free
+        value: openrouter/free
       - key: OPENROUTER_CHAT_API_KEY
         sync: false
       - key: OPENROUTER_CHAT_MODEL
-        value: openai/gpt-oss-20b:free
+        value: openrouter/free
       - key: OPENROUTER_FIND_BOOK_MODEL
         value: qwen/qwen3-235b-a22b:free
       - key: RESEND_API_KEY
