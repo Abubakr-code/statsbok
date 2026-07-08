@@ -25,13 +25,25 @@ const AI_FREE_MODELS = [
   'openrouter/free',
 ].filter((v, i, a) => a.indexOf(v) === i);
 
-const AI_SYSTEM_PROMPT =
-  'Sen — "StatBooks AI", kitoblar va adabiyot bo\'yicha ixtisoslashgan yordamchi. ' +
-  'StatBooks platformasi kitob iqtiboslarini topish va kitoblarni kashf etish uchun. ' +
-  'Javoblaringni qisqa (2-5 jumla), issiq va do\'stona uslubda yoz. ' +
-  'Kitob nomlari va muallif ismlarini <b>qalin</b> yoz (HTML formatda). ' +
-  'Foydalanuvchi qaysi tilda yozsa — o\'sha tilda javob ber (o\'zbek, rus yoki ingliz). ' +
-  'Kitoblar bilan bog\'liq bo\'lmagan savollar kelsa, muloyimlik bilan mavzuni kitoblarga qaytargin.';
+// Language-specific system prompts (in English so all models understand the instruction,
+// but the REPLY language is forced to the user's preferred language)
+const AI_PROMPTS = {
+  uz: 'You are "StatBooks AI", a warm book assistant for the StatBooks platform. ' +
+      'CRITICAL: You MUST reply ONLY in Uzbek (Latin script). Never respond in English or Russian. ' +
+      'Keep replies short (2-5 sentences), warm and friendly. ' +
+      'Bold book titles and author names using <b>HTML tags</b>. ' +
+      'If asked something unrelated to books, gently steer back to reading topics.',
+  ru: 'You are "StatBooks AI", a warm book assistant for the StatBooks platform. ' +
+      'CRITICAL: You MUST reply ONLY in Russian. Never respond in English or Uzbek. ' +
+      'Keep replies short (2-5 sentences), warm and friendly. ' +
+      'Bold book titles and author names using <b>HTML tags</b>. ' +
+      'If asked something unrelated to books, gently steer back to reading topics.',
+  en: 'You are "StatBooks AI", a warm book assistant for the StatBooks platform. ' +
+      'CRITICAL: You MUST reply ONLY in English. Never respond in Uzbek or Russian. ' +
+      'Keep replies short (2-5 sentences), warm and friendly. ' +
+      'Bold book titles and author names using <b>HTML tags</b>. ' +
+      'If asked something unrelated to books, gently steer back to reading topics.',
+};
 
 const PAGE_SIZE = 3;
 const AI_MAX_HISTORY = 14;
@@ -579,58 +591,27 @@ async function sendResultsPage(chatId, state, deleteLoadingId) {
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── AI chat ───────────────────────────────────────────────────────────────────
+// Max 3 models × 8s = 24s total — keeps Telegram response fast
+const AI_MODELS_FAST = [
+  'nvidia/nemotron-3-super-120b-a12b:free', // fast (~4s), reliably returns content
+  'openrouter/free',                          // auto-routes, usually fast
+  'openai/gpt-oss-120b:free',                 // reliable fallback
+].slice(0, 3);
+
 async function callAI(chatId) {
   if (!OPENROUTER_CHAT_API_KEY) throw new Error('OPENROUTER_CHAT_API_KEY yo\'q');
   const state = getState(chatId);
+  const systemPrompt = AI_PROMPTS[state.lang] || AI_PROMPTS.uz;
   const messages = [
-    { role: 'system', content: AI_SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt },
     ...state.aiHistory.slice(-AI_MAX_HISTORY)
   ];
 
   let lastErr = 'Hech qanday model ishlamadi';
-  for (const model of AI_FREE_MODELS) {
+  for (const model of AI_MODELS_FAST) {
     try {
       const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 20000);
-      const res = await fetch(OPENROUTER_URL, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${OPENROUTER_CHAT_API_KEY}`,
-          'HTTP-Referer': FRONTEND,
-          'X-Title': 'StatBooks'
-        },
-        body: JSON.stringify({ model, max_tokens: 700, messages }),
-        signal: controller.signal
-      });
-      clearTimeout(tid);
-      if (res.ok) {
-        const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content || '';
-        if (reply) { state.aiHistory.push({ role: 'assistant', content: reply }); return reply; }
-        lastErr = 'Bo\'sh javob';
-      } else {
-        lastErr = `${res.status}`;
-      }
-    } catch (err) {
-      lastErr = err.message;
-    }
-  }
-  throw new Error(lastErr);
-}
-
-// One-shot AI call (no history) — used for the "AI insight" button.
-async function aiOneShot(userContent) {
-  if (!OPENROUTER_CHAT_API_KEY) throw new Error('OPENROUTER_CHAT_API_KEY yo\'q');
-  const messages = [
-    { role: 'system', content: AI_SYSTEM_PROMPT },
-    { role: 'user', content: userContent }
-  ];
-  let lastErr = 'AI ishlamadi';
-  for (const model of AI_FREE_MODELS) {
-    try {
-      const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 20000);
+      const tid = setTimeout(() => controller.abort(), 8000); // 8s per model
       const res = await fetch(OPENROUTER_URL, {
         method: 'POST',
         headers: {
@@ -645,7 +626,50 @@ async function aiOneShot(userContent) {
       clearTimeout(tid);
       if (res.ok) {
         const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content || '';
+        const msg = data.choices?.[0]?.message || {};
+        // Some reasoning models return content:null — fall back to reasoning field
+        const reply = (msg.content || msg.reasoning || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+        if (reply) { state.aiHistory.push({ role: 'assistant', content: reply }); return reply; }
+        lastErr = 'Bo\'sh javob';
+      } else {
+        lastErr = `${res.status}`;
+      }
+    } catch (err) {
+      lastErr = err.message;
+    }
+  }
+  throw new Error(lastErr);
+}
+
+// One-shot AI call (no history) — used for the "AI insight" button.
+async function aiOneShot(userContent, lang = 'uz') {
+  if (!OPENROUTER_CHAT_API_KEY) throw new Error('OPENROUTER_CHAT_API_KEY yo\'q');
+  const systemPrompt = AI_PROMPTS[lang] || AI_PROMPTS.uz;
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userContent }
+  ];
+  let lastErr = 'AI ishlamadi';
+  for (const model of AI_MODELS_FAST) {
+    try {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 8000); // 8s per model
+      const res = await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${OPENROUTER_CHAT_API_KEY}`,
+          'HTTP-Referer': FRONTEND,
+          'X-Title': 'StatBooks'
+        },
+        body: JSON.stringify({ model, max_tokens: 500, messages }),
+        signal: controller.signal
+      });
+      clearTimeout(tid);
+      if (res.ok) {
+        const data = await res.json();
+        const msg = data.choices?.[0]?.message || {};
+        const reply = (msg.content || msg.reasoning || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
         if (reply) return reply;
         lastErr = 'Bo\'sh javob';
       } else {
@@ -1097,7 +1121,7 @@ bot.on('callback_query', async (query) => {
       `Kitob: "${book.title || ''}"${book.author ? ` — ${book.author}` : ''}. ` +
       `Iqtibos: "${(item.text || '').slice(0, 500)}". ${langLine}`;
     try {
-      const reply = await aiOneShot(prompt);
+      const reply = await aiOneShot(prompt, lang);
       await bot.deleteMessage(chatId, loadMsg.message_id).catch(() => {});
       await bot.sendMessage(chatId, reply, { parse_mode: 'HTML' }).catch(() =>
         bot.sendMessage(chatId, reply).catch(() => {})
