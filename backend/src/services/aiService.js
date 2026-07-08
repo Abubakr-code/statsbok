@@ -198,90 +198,84 @@ async function moodSearch(mood, lang = 'en') {
 }
 
 /**
- * Book Oracle: given a user question + DB context, finds the best book(s).
+ * Book Oracle: finds books from DB, uses AI only for a short explanation.
+ * No JSON parsing from AI — DB search handles matching, AI just explains.
  * Returns { reply: string, books: Array }
  */
 async function findBookForQuestion(question, history = [], dbResults = [], topBooks = [], lang = 'uz') {
-  const apiKey = process.env.OPENROUTER_CHAT_API_KEY || process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
-
-  const langInstruction = {
-    uz: "Reply ONLY in Uzbek (Latin script).",
-    en: 'Reply ONLY in English.',
-    ru: 'Reply ONLY in Russian.'
-  };
-
   const noBookMsg = {
     uz: "Bu mavzu bo'yicha hozircha mos kitob topilmadi.",
     en: 'No matching book found for this topic yet.',
     ru: 'Подходящая книга по этой теме пока не найдена.'
   };
+  const suggestMsg = {
+    uz: "Quyidagi kitoblar sizning savolingizga tegishli bo'lishi mumkin:",
+    en: 'These books may be helpful for your question:',
+    ru: 'Эти книги могут быть полезны для вашего вопроса:'
+  };
 
+  // Build matched books from DB search results (reliable, no AI needed)
   const seen = new Set();
-  const bookList = [];
-  for (const r of dbResults.slice(0, 8)) {
+  const matchedBooks = [];
+  for (const r of dbResults.slice(0, 5)) {
     const b = r.book;
     if (!b) continue;
     const id = String(b.id || b._id || '');
     if (id && seen.has(id)) continue;
     if (id) seen.add(id);
-    bookList.push({
+    matchedBooks.push({
       id,
       title: b.title || '',
       author: b.author || '',
       page: r.pageNumber || null,
-      snippet: (r.text || '').slice(0, 120)
-    });
-  }
-  for (const b of topBooks.slice(0, 20)) {
-    const id = String(b._id || '');
-    if (seen.has(id)) continue;
-    seen.add(id);
-    bookList.push({
-      id,
-      title: b.title || '',
-      author: b.author || '',
-      page: null,
-      snippet: (b.description || '').slice(0, 100)
+      reason: '',
+      coverImage: b.coverImage || null,
+      affiliateLink: b.affiliateLink || null
     });
   }
 
-  const booksContext = bookList.length
-    ? bookList.map((b) => `ID:${b.id} | "${b.title}" by ${b.author}${b.snippet ? ` | ${b.snippet}` : ''}`).join('\n')
-    : 'No books available.';
+  // If no keyword matches, fall back to top popular books
+  const booksToShow = matchedBooks.length
+    ? matchedBooks
+    : topBooks.slice(0, 3).map((b) => ({
+        id: String(b._id || ''),
+        title: b.title || '',
+        author: b.author || '',
+        page: null,
+        reason: '',
+        coverImage: b.coverImage || null,
+        affiliateLink: b.affiliateLink || null
+      })).filter((b) => b.title);
 
-  const noBook = noBookMsg[lang] || noBookMsg.en;
-  const replyLang = langInstruction[lang] || langInstruction.en;
+  if (!booksToShow.length) {
+    return { reply: noBookMsg[lang] || noBookMsg.en, books: [] };
+  }
 
-  const systemPrompt =
-    `You are "StatBooks Oracle". A user asks a question; you find the most relevant book from the list below.\n` +
-    `${replyLang}\n\n` +
-    `AVAILABLE BOOKS:\n${booksContext}\n\n` +
-    `RULES:\n` +
-    `1. Use ONLY books from the list above.\n` +
-    `2. Respond STRICTLY in this JSON format (nothing else):\n` +
-    `{"answer":"...","books":[{"id":"...","title":"...","author":"...","page":null,"reason":"..."}]}\n` +
-    `3. If no book matches: {"answer":"${noBook}","books":[]}\n` +
-    `4. Keep "answer" brief (2-3 sentences). "reason" should explain why this book is relevant.`;
+  // Ask AI for a SHORT plain-text explanation (no JSON, no complex formatting)
+  // Any model can write 2 sentences — much more reliable than JSON generation
+  const apiKey = process.env.OPENROUTER_CHAT_API_KEY || process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    return { reply: suggestMsg[lang] || suggestMsg.en, books: booksToShow };
+  }
 
-  const historySlice = (history || []).slice(-4).map((m) => ({
-    role: m.role === 'assistant' ? 'assistant' : 'user',
-    content: String(m.content || '').slice(0, 600)
-  }));
+  const langInstruction = {
+    uz: 'Reply in Uzbek (Latin script, 2-3 sentences max).',
+    en: 'Reply in English (2-3 sentences max).',
+    ru: 'Reply in Russian (2-3 sentences max).'
+  };
+  const bookTitles = booksToShow.map((b) => `"${b.title}" (${b.author})`).join(', ');
+  const systemMsg =
+    `You are a helpful librarian. Briefly explain in 2-3 sentences why the book(s) ${bookTitles} ` +
+    `are relevant to the user's question. Be warm and encouraging. ` +
+    `${langInstruction[lang] || langInstruction.en}`;
 
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    ...historySlice,
-    { role: 'user', content: question }
-  ];
+  // Try models that reliably return plain text (no JSON parsing needed)
+  const explainCandidates = ['nvidia/nemotron-3-super-120b-a12b:free', 'openrouter/free'];
 
-  // Limit to 2 attempts × 10s = 20s max (Netlify proxy limit is 26s)
-  const candidates = [...new Set([...FIND_BOOK_FALLBACKS])].slice(0, 2);
-
-  for (const m of candidates) {
-    let res;
+  for (const m of explainCandidates) {
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 10000); // 10s per model
+    const timer = setTimeout(() => ac.abort(), 8000); // 8s per model
+    let res;
     try {
       res = await fetch(OPENROUTER_URL, {
         method: 'POST',
@@ -291,7 +285,11 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
           'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
           'X-Title': 'StatBooks'
         },
-        body: JSON.stringify({ model: m, max_tokens: 600, messages }),
+        body: JSON.stringify({
+          model: m,
+          max_tokens: 150,
+          messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: question }]
+        }),
         signal: ac.signal
       });
     } catch { clearTimeout(timer); continue; }
@@ -299,33 +297,13 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
 
     if (!res.ok) continue;
     const data = await res.json();
-    const raw = (data.choices?.[0]?.message?.content || '').trim();
-    if (!raw) continue;
-
-    let parsed;
-    for (const c of [raw, raw.replace(/^```json?\s*/i, '').replace(/\s*```$/, ''), (raw.match(/\{[\s\S]*\}/) || [''])[0]]) {
-      try { parsed = JSON.parse(c); break; } catch { /* try next */ }
-    }
-    if (!parsed) continue;
-
-    const books = (Array.isArray(parsed.books) ? parsed.books : []).map((b) => {
-      const dbBook =
-        dbResults.map((r) => r.book).find((bk) => bk && String(bk.id || bk._id) === String(b.id)) ||
-        topBooks.find((bk) => String(bk._id) === String(b.id));
-      return {
-        id: b.id || null,
-        title: b.title || dbBook?.title || '',
-        author: b.author || dbBook?.author || '',
-        page: b.page || null,
-        reason: b.reason || '',
-        coverImage: dbBook?.coverImage || null,
-        affiliateLink: dbBook?.affiliateLink || null
-      };
-    }).filter((b) => b.title);
-
-    return { reply: parsed.answer || '', books };
+    const msg = data.choices?.[0]?.message || {};
+    const reply = (msg.content || msg.reasoning || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    if (reply) return { reply, books: booksToShow };
   }
-  throw new Error('Book Oracle: all models unavailable');
+
+  // AI failed → return books with a simple default reply (still useful!)
+  return { reply: suggestMsg[lang] || suggestMsg.en, books: booksToShow };
 }
 
 module.exports = { recommend, context, moodSearch, chat, findBookForQuestion };
