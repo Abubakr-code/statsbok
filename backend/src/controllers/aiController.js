@@ -41,6 +41,8 @@ async function chat(req, res, next) {
     const reply = await ai.chat(messages, lang);
     res.json({ reply });
   } catch (err) {
+    const isAiDown = /unavailable|OpenRouter|OPENROUTER_API_KEY/i.test(err.message);
+    if (isAiDown) return res.status(503).json({ error: 'ai_unavailable', message: err.message });
     next(err);
   }
 }
@@ -60,6 +62,8 @@ async function findBook(req, res, next) {
     const result = await ai.findBookForQuestion(q, messages || [], dbResults, topBooks, resolvedLang);
     res.json(result);
   } catch (err) {
+    const isAiDown = /unavailable|OpenRouter|OPENROUTER_API_KEY/i.test(err.message);
+    if (isAiDown) return res.status(503).json({ error: 'ai_unavailable', message: err.message });
     next(err);
   }
 }

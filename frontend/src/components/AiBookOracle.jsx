@@ -76,8 +76,10 @@ export default function AiBookOracle() {
     try {
       const { data } = await api.post('/ai/find-book', { question: q.trim(), lang });
       setResults(data);
-    } catch {
-      setResults({ reply: t('ai.error'), books: [] });
+    } catch (err) {
+      const status = err?.response?.status;
+      const reply = status === 503 ? t('ai.disabled') : t('ai.error');
+      setResults({ reply, books: [] });
     } finally {
       setLoading(false);
     }

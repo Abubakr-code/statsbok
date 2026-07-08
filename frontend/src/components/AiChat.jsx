@@ -36,7 +36,12 @@ export default function AiChat() {
       const { data } = await api.post('/ai/chat', { messages: next, lang });
       if (mountedRef.current) setMessages([...next, { role: 'assistant', content: data.reply || t('ai.error') }]);
     } catch (err) {
-      const msg = err.status === 500 && /OPENROUTER/i.test(err.message) ? t('ai.disabled') : t('ai.error');
+      const status = err?.response?.status;
+      const serverMsg = err?.response?.data?.message || '';
+      const msg =
+        status === 503 || /OPENROUTER|unavailable/i.test(serverMsg)
+          ? t('ai.disabled')
+          : t('ai.error');
       if (mountedRef.current) setMessages([...next, { role: 'assistant', content: msg }]);
     } finally {
       if (mountedRef.current) setLoading(false);
