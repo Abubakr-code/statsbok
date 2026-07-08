@@ -74,9 +74,11 @@ const FREE_MODEL_FALLBACKS = [
   'meta-llama/llama-4-scout:free', // second fallback
 ];
 
+// find-book needs JSON output → avoid reasoning-only models that return content:null
+// Use instruction-tuned models (NOT reasoning/thinking models) so JSON is reliable
 const FIND_BOOK_FALLBACKS = [
-  'openrouter/free',           // try first — fastest
-  'openai/gpt-oss-20b:free',   // second attempt
+  'meta-llama/llama-4-scout:free',   // fast, great at JSON instructions
+  'openai/gpt-oss-20b:free',         // reliable JSON output
 ];
 
 function modelCandidates() {
@@ -155,8 +157,9 @@ async function chat(messages, lang = 'en') {
 
     if (res.ok) {
       const data = await res.json();
-      // Strip <think>...</think> blocks that reasoning models expose
-      const raw = data.choices?.[0]?.message?.content || '';
+      const msg = data.choices?.[0]?.message || {};
+      // Some reasoning models return content:null and put answer in reasoning field
+      const raw = msg.content || msg.reasoning || '';
       const reply = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
       if (reply) return reply;
       lastError = 'Empty response';
@@ -288,7 +291,7 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
           'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
           'X-Title': 'StatBooks'
         },
-        body: JSON.stringify({ model: m, max_tokens: 400, messages }),
+        body: JSON.stringify({ model: m, max_tokens: 600, messages }),
         signal: ac.signal
       });
     } catch { clearTimeout(timer); continue; }
