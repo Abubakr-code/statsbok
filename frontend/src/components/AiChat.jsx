@@ -24,12 +24,22 @@ const SUGGESTIONS = {
   ],
 };
 
+const LOGO = '/logo.jpg';
+
+function BotAvatar({ size = 8 }) {
+  return (
+    <img
+      src={LOGO}
+      alt="StatBooks AI"
+      className={`h-${size} w-${size} shrink-0 rounded-full object-cover border border-amber/30`}
+    />
+  );
+}
+
 function TypingDots() {
   return (
     <div className="mr-auto flex items-end gap-2 px-1">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber/20 text-base select-none">
-        📚
-      </span>
+      <BotAvatar />
       <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-ink-700 px-4 py-3">
         <span className="h-2 w-2 animate-bounce rounded-full bg-amber/70 [animation-delay:-0.3s]" />
         <span className="h-2 w-2 animate-bounce rounded-full bg-amber/70 [animation-delay:-0.15s]" />
@@ -118,14 +128,16 @@ export default function AiChat() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={t('ai.open')}
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-amber shadow-xl shadow-amber/30 transition-all duration-200 hover:scale-110 hover:shadow-amber/50 active:scale-95"
+        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-amber shadow-xl shadow-amber/30 transition-all duration-200 hover:scale-110 hover:shadow-amber/50 active:scale-95"
       >
         {open ? (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1814" strokeWidth="2.5">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
+          <div className="flex h-full w-full items-center justify-center bg-amber">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1814" strokeWidth="2.5">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </div>
         ) : (
-          <span className="text-2xl select-none" aria-hidden>📚</span>
+          <img src={LOGO} alt="StatBooks AI" className="h-full w-full object-cover" />
         )}
         {!open && unread > 0 && (
           <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
@@ -140,8 +152,8 @@ export default function AiChat() {
 
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-ink-700 bg-gradient-to-r from-ink-800 to-ink-900 px-4 py-3">
-            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber/20 text-xl">
-              📚
+            <div className="relative shrink-0">
+              <img src={LOGO} alt="StatBooks AI" className="h-10 w-10 rounded-full object-cover border border-amber/30" />
               <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-ink-900 bg-green-500" />
             </div>
             <div className="flex-1 min-w-0">
@@ -175,11 +187,7 @@ export default function AiChat() {
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 scroll-smooth">
             {view.map((m, i) => (
               <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {m.role === 'assistant' && (
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber/20 text-base select-none">
-                    📚
-                  </span>
-                )}
+                {m.role === 'assistant' && <BotAvatar />}
                 <div
                   className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
                     m.role === 'user'
