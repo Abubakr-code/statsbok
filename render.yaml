@@ -38,9 +38,11 @@ services:
       - key: OPENROUTER_CHAT_API_KEY
         sync: false
       - key: OPENROUTER_CHAT_MODEL
-        value: openrouter/free
+        value: meta-llama/llama-3.3-70b-instruct:free
       - key: OPENROUTER_FIND_BOOK_MODEL
-        value: qwen/qwen3-235b-a22b:free
+        value: meta-llama/llama-3.3-70b-instruct:free
+      - key: GROQ_API_KEY
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM

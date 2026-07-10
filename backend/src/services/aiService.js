@@ -57,19 +57,26 @@ function langName(lang) {
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_CHAT_API_KEY = process.env.OPENROUTER_CHAT_API_KEY || process.env.OPENROUTER_API_KEY;
-// Primary model from Render env — set to meta-llama/llama-3.3-70b-instruct:free
 const OPENROUTER_CHAT_MODEL =
   process.env.OPENROUTER_CHAT_MODEL || process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
 
-// Netlify proxy = 26s limit. 3 models × 7s = 21s max, safe margin.
-// Only instruction-tuned models that return real content (NOT reasoning-only models).
-const FREE_MODEL_FALLBACKS = [
-  'meta-llama/llama-3.3-70b-instruct:free',   // best multilingual, stable since Dec 2024
-  'meta-llama/llama-3.2-3b-instruct:free',    // fast small llama, reliable fallback
-  'mistralai/mistral-7b-instruct:free',       // very stable, good multilingual
+// Groq — free alternative API (30 req/min free, very fast)
+// Get key at https://console.groq.com → set GROQ_API_KEY in Render
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_MODELS = [
+  'llama-3.3-70b-versatile',   // best multilingual
+  'llama-3.1-8b-instant',      // ultra-fast fallback
 ];
 
-// find-book: DB does matching, AI just writes 2-3 sentence explanation
+// OpenRouter free model list — try these in order
+const FREE_MODEL_FALLBACKS = [
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'meta-llama/llama-3.2-3b-instruct:free',
+  'mistralai/mistral-7b-instruct:free',
+];
+
+// find-book models
 const FIND_BOOK_EXPLAIN_MODELS = [
   'meta-llama/llama-3.3-70b-instruct:free',
   'meta-llama/llama-3.2-3b-instruct:free',
@@ -78,7 +85,35 @@ const FIND_BOOK_EXPLAIN_MODELS = [
 
 function modelCandidates() {
   const list = [OPENROUTER_CHAT_MODEL, ...FREE_MODEL_FALLBACKS];
-  return [...new Set(list)].slice(0, 3); // max 3 models × 7s = 21s
+  return [...new Set(list)].slice(0, 3);
+}
+
+/**
+ * Try Groq API as fallback when OpenRouter fails.
+ * Returns reply string or null if Groq also fails.
+ */
+async function tryGroq(payloadMessages, timeoutMs = 8000) {
+  if (!GROQ_API_KEY) return null;
+  for (const model of GROQ_MODELS) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), timeoutMs);
+    try {
+      const res = await fetch(GROQ_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({ model, max_tokens: 400, messages: payloadMessages }),
+        signal: ac.signal
+      });
+      const data = await res.json();
+      clearTimeout(timer);
+      const reply = (data?.choices?.[0]?.message?.content || '').trim();
+      if (reply) return reply;
+    } catch { clearTimeout(timer); }
+  }
+  return null;
 }
 
 function bookAssistantSystemPrompt(lang) {
@@ -162,6 +197,10 @@ async function chat(messages, lang = 'en') {
     if (reply) return reply;
     lastError = 'content:null (reasoning-only model, skipping)';
   }
+
+  // OpenRouter failed — try Groq as fallback (different provider, different limits)
+  const groqReply = await tryGroq(payloadMessages);
+  if (groqReply) return groqReply;
 
   throw new Error(`OpenRouter: all models unavailable (${lastError})`);
 }
@@ -277,7 +316,25 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
     return { reply, books: dbBooks };
   }
 
-  // If AI completely unavailable, return empty with error message
+  // OpenRouter failed — try Groq as fallback
+  const groqReply = await tryGroq(messages, 8000);
+  if (groqReply) {
+    const dbBooks = dbResults.slice(0, 3).map((r) => {
+      const b = r.book;
+      if (!b) return null;
+      return {
+        id: String(b.id || b._id || ''),
+        title: b.title || '',
+        author: b.author || '',
+        page: r.pageNumber || null,
+        reason: '',
+        coverImage: b.coverImage || null,
+        affiliateLink: b.affiliateLink || null
+      };
+    }).filter((b) => b && b.title);
+    return { reply: groqReply, books: dbBooks };
+  }
+
   const errMsg = {
     uz: 'AI hozir javob bera olmadi. Birozdan so\'ng urinib ko\'ring.',
     ru: 'AI сейчас не может ответить. Попробуйте чуть позже.',

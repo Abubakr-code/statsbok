@@ -3,27 +3,6 @@ import api from '../services/api';
 import { useI18n } from '../i18n';
 import RichText from './RichText';
 
-const SUGGESTIONS = {
-  uz: [
-    "📖 O'qishni qayerdan boshlasam?",
-    "🌹 Navoiy haqida ayting",
-    "💡 Eng yaxshi tarix kitoblari",
-    "🎯 Motivatsion kitob tavsiya",
-  ],
-  en: [
-    "📖 Where should I start reading?",
-    "💡 Best history books",
-    "🎯 Recommend a motivational book",
-    "✨ Classic novels to read",
-  ],
-  ru: [
-    "📖 С чего начать читать?",
-    "💡 Лучшие книги по истории",
-    "🎯 Посоветуй мотивирующую книгу",
-    "✨ Классика, которую стоит прочесть",
-  ],
-};
-
 const LOGO = '/logo.jpg';
 
 function BotAvatar({ size = 8 }) {
@@ -64,8 +43,6 @@ export default function AiChat() {
 
   const greeting = { role: 'assistant', content: t('ai.greeting') };
   const view = messages.length === 0 ? [greeting] : messages;
-  const suggestions = SUGGESTIONS[lang] || SUGGESTIONS.uz;
-
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -214,21 +191,6 @@ export default function AiChat() {
             ))}
 
             {loading && <TypingDots />}
-
-            {/* Suggestion chips — only before first user message */}
-            {messages.length === 0 && !loading && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {suggestions.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => sendText(s)}
-                    className="rounded-full border border-amber/25 bg-amber/8 px-3 py-1 text-xs text-amber transition-colors hover:bg-amber/20"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Input */}
@@ -254,9 +216,6 @@ export default function AiChat() {
                 </svg>
               </button>
             </div>
-            <p className="mt-1.5 text-center text-[10px] text-parchment-faint">
-              Enter — yuborish · Shift+Enter — yangi qator
-            </p>
           </div>
         </div>
       )}
