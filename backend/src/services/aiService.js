@@ -133,11 +133,13 @@ async function chat(messages, lang = 'en') {
 
   let lastError = 'No model available';
   for (const model of modelCandidates()) {
-    let res;
+    // Timer covers the ENTIRE request (headers + body).
+    // clearTimeout only after res.json() so slow body reads are also aborted.
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 7000); // 7s per model × 3 models = 21s max
+    const timer = setTimeout(() => ac.abort(), 7000); // 7s hard limit per model
+    let data;
     try {
-      res = await fetch(OPENROUTER_URL, {
+      const res = await fetch(OPENROUTER_URL, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -145,28 +147,22 @@ async function chat(messages, lang = 'en') {
           'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
           'X-Title': 'StatBooks'
         },
-        body: JSON.stringify({ model, max_tokens: 500, messages: payloadMessages }),
+        body: JSON.stringify({ model, max_tokens: 400, messages: payloadMessages }),
         signal: ac.signal
       });
+      if (!res.ok) { clearTimeout(timer); lastError = `OpenRouter ${res.status}`; continue; }
+      data = await res.json(); // timer still active — aborts if body is slow
+      clearTimeout(timer);
     } catch (err) {
       clearTimeout(timer);
       lastError = err.name === 'AbortError' ? `${model} timeout` : err.message;
       continue;
     }
-    clearTimeout(timer);
 
-    if (res.ok) {
-      const data = await res.json();
-      // NEVER use reasoning/thinking tokens as the reply — they are the model's
-      // internal thought process, not the answer. If content is null, skip.
-      const reply = (data.choices?.[0]?.message?.content || '').trim();
-      if (reply) return reply;
-      lastError = 'content:null (reasoning-only model, skipping)';
-      continue;
-    }
-
-    // 429 rate-limit, 404 model gone, 5xx: try the next model.
-    lastError = `OpenRouter ${res.status}`;
+    // NEVER use reasoning/thinking tokens — they are the model's internal thoughts.
+    const reply = (data.choices?.[0]?.message?.content || '').trim();
+    if (reply) return reply;
+    lastError = 'content:null (reasoning-only model, skipping)';
   }
 
   throw new Error(`OpenRouter: all models unavailable (${lastError})`);
@@ -273,10 +269,10 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
 
   for (const m of explainCandidates) {
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 8000); // 8s per model
-    let res;
+    const timer = setTimeout(() => ac.abort(), 8000); // 8s covers headers + body
+    let data;
     try {
-      res = await fetch(OPENROUTER_URL, {
+      const res = await fetch(OPENROUTER_URL, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -291,12 +287,12 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
         }),
         signal: ac.signal
       });
+      if (!res.ok) { clearTimeout(timer); continue; }
+      data = await res.json();
+      clearTimeout(timer);
     } catch { clearTimeout(timer); continue; }
-    clearTimeout(timer);
 
-    if (!res.ok) continue;
-    const data = await res.json();
-    const reply = (data.choices?.[0]?.message?.content || '').trim();
+    const reply = (data?.choices?.[0]?.message?.content || '').trim();
     if (reply) return { reply, books: booksToShow };
   }
 

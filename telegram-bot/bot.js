@@ -610,9 +610,10 @@ async function callAI(chatId) {
 
   let lastErr = 'Hech qanday model ishlamadi';
   for (const model of AI_MODELS_FAST) {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 8000); // 8s covers headers+body
+    let data;
     try {
-      const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 8000); // 8s per model
       const res = await fetch(OPENROUTER_URL, {
         method: 'POST',
         headers: {
@@ -621,22 +622,20 @@ async function callAI(chatId) {
           'HTTP-Referer': FRONTEND,
           'X-Title': 'StatBooks'
         },
-        body: JSON.stringify({ model, max_tokens: 500, messages }),
+        body: JSON.stringify({ model, max_tokens: 400, messages }),
         signal: controller.signal
       });
+      if (!res.ok) { clearTimeout(tid); lastErr = `${res.status}`; continue; }
+      data = await res.json(); // timer still active — aborts slow body reads
       clearTimeout(tid);
-      if (res.ok) {
-        const data = await res.json();
-        // Never use reasoning tokens as reply — they are the model's thinking process
-        const reply = (data.choices?.[0]?.message?.content || '').trim();
-        if (reply) { state.aiHistory.push({ role: 'assistant', content: reply }); return reply; }
-        lastErr = 'Bo\'sh javob (reasoning-only model, skipping)';
-      } else {
-        lastErr = `${res.status}`;
-      }
     } catch (err) {
-      lastErr = err.message;
+      clearTimeout(tid);
+      lastErr = err.name === 'AbortError' ? `${model} timeout` : err.message;
+      continue;
     }
+    const reply = (data.choices?.[0]?.message?.content || '').trim();
+    if (reply) { state.aiHistory.push({ role: 'assistant', content: reply }); return reply; }
+    lastErr = 'Bo\'sh javob (reasoning-only)';
   }
   throw new Error(lastErr);
 }
@@ -651,9 +650,10 @@ async function aiOneShot(userContent, lang = 'uz') {
   ];
   let lastErr = 'AI ishlamadi';
   for (const model of AI_MODELS_FAST) {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 8000);
+    let data;
     try {
-      const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 8000); // 8s per model
       const res = await fetch(OPENROUTER_URL, {
         method: 'POST',
         headers: {
@@ -662,21 +662,20 @@ async function aiOneShot(userContent, lang = 'uz') {
           'HTTP-Referer': FRONTEND,
           'X-Title': 'StatBooks'
         },
-        body: JSON.stringify({ model, max_tokens: 500, messages }),
+        body: JSON.stringify({ model, max_tokens: 400, messages }),
         signal: controller.signal
       });
+      if (!res.ok) { clearTimeout(tid); lastErr = `${res.status}`; continue; }
+      data = await res.json();
       clearTimeout(tid);
-      if (res.ok) {
-        const data = await res.json();
-        const reply = (data.choices?.[0]?.message?.content || '').trim();
-        if (reply) return reply;
-        lastErr = 'Bo\'sh javob (reasoning-only model)';
-      } else {
-        lastErr = `${res.status}`;
-      }
     } catch (err) {
-      lastErr = err.message;
+      clearTimeout(tid);
+      lastErr = err.name === 'AbortError' ? `${model} timeout` : err.message;
+      continue;
     }
+    const reply = (data.choices?.[0]?.message?.content || '').trim();
+    if (reply) return reply;
+    lastErr = 'Bo\'sh javob (reasoning-only)';
   }
   throw new Error(lastErr);
 }
