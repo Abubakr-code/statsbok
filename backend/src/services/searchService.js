@@ -704,9 +704,9 @@ async function aiSearchBooks(query, lang = 'en') {
   const langMap = { uz: "O'zbek", en: 'English', ru: 'Русский' };
   const langName = langMap[lang] || 'English';
   const langInstruction = {
-    uz: "JAVOBINGIZNI FAQAT O'ZBEK TILIDA (lotin yozuvida) bering. Avvalo o'zbek, turkiy va Markaziy Osiyo adabiyotidagi kitoblarni toping. Kitob nomi, muallifi va tavsifi o'zbek tilida bo'lsin.",
-    en: 'You MUST respond in English. Book title, author, and description must be in English.',
-    ru: 'ОТВЕЧАЙТЕ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ. Название книги, автор и описание должны быть на русском.'
+    uz: "JAVOBINGIZNI FAQAT O'ZBEK TILIDA (lotin yozuvida) bering. FAQAT o'zbek, turkiy va Markaziy Osiyo adabiyotidagi kitoblarni ko'rsating. Ingliz yoki rus tilidagi kitoblarni KO'RSATMANG. language maydonini har doim 'uz' deb belgilang.",
+    en: "You MUST respond in English. Return ONLY English-language books. Set the language field to 'en' for every book.",
+    ru: "ОТВЕЧАЙТЕ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ. Возвращайте ТОЛЬКО книги на русском языке. Для каждой книги устанавливайте поле language в 'ru'."
   };
 
   const systemPrompt = `You are a world-class book search engine. The user's query language is: ${langName}.
@@ -1145,9 +1145,26 @@ async function searchQuotesEnhanced(input, lang = 'en') {
     return qualityScore(b, effectiveLang) - qualityScore(a, effectiveLang);
   });
 
-  const finalResults = merged
-    .map((item) => localizeResultByLang(item, effectiveLang))
-    .slice(0, Math.max(RESULT_LIMIT, 20));
+  let sortedMerged = merged
+    .map((item) => localizeResultByLang(item, effectiveLang));
+
+  // Language filter: for Uzbek/Russian queries, hide English-only books.
+  // "A Room with a View" matching "va" from an Uzbek sentence is a false positive.
+  if (effectiveLang === 'uz' || effectiveLang === 'ru') {
+    const langFiltered = sortedMerged.filter((r) => {
+      const b = r.book || {};
+      // Keep if language matches or language is unknown (might be correct)
+      if (b.language === effectiveLang) return true;
+      if (!b.language) return true;
+      // Drop clearly wrong-language results
+      return false;
+    });
+    // Only use filtered list if it has results; otherwise return empty
+    // (don't show wrong-language books as a fallback — that's confusing)
+    sortedMerged = langFiltered;
+  }
+
+  const finalResults = sortedMerged.slice(0, Math.max(RESULT_LIMIT, 20));
   searchCache.set(cacheKey, { ts: Date.now(), results: finalResults });
 
   return finalResults;
