@@ -57,28 +57,25 @@ function langName(lang) {
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_CHAT_API_KEY = process.env.OPENROUTER_CHAT_API_KEY || process.env.OPENROUTER_API_KEY;
-// openrouter/free = OpenRouter auto-picks the best available free model
-// No need to track individual model slugs — OpenRouter maintains this
+// Primary model from Render env — set to meta-llama/llama-3.3-70b-instruct:free
 const OPENROUTER_CHAT_MODEL =
-  process.env.OPENROUTER_CHAT_MODEL || process.env.OPENROUTER_MODEL || 'openrouter/free';
-const OPENROUTER_FIND_BOOK_MODEL =
-  process.env.OPENROUTER_FIND_BOOK_MODEL || 'qwen/qwen3-235b-a22b:free';
-const { detectLanguage } = require('../utils/languageDetector');
+  process.env.OPENROUTER_CHAT_MODEL || process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
 
-// Netlify proxy timeout = 26 seconds. We must finish ALL retries within ~22s.
-// Strategy: try fast models first (openrouter/free is quickest router),
-// limit to 3 attempts × 7s = 21s max for chat, 2 attempts × 10s = 20s for find-book.
+// Netlify proxy = 26s limit. 3 models × 7s = 21s max, safe margin.
+// Only instruction-tuned models that return real content (NOT reasoning-only models).
+// openrouter/free is EXCLUDED — it routes to random models incl. Korean/Chinese
+// that ignore language instructions or return content:null.
 const FREE_MODEL_FALLBACKS = [
-  'openrouter/free',           // fastest — auto-routes to best available free model
-  'openai/gpt-oss-20b:free',   // fast fallback
-  'meta-llama/llama-4-scout:free', // second fallback
+  'meta-llama/llama-3.3-70b-instruct:free',  // best multilingual, great Uzbek
+  'google/gemma-4-31b-it:free',              // instruction-tuned, good language follow
+  'nvidia/nemotron-3-super-120b-a12b:free',  // fast fallback
 ];
 
-// find-book needs JSON output → avoid reasoning-only models that return content:null
-// Use instruction-tuned models (NOT reasoning/thinking models) so JSON is reliable
-const FIND_BOOK_FALLBACKS = [
-  'meta-llama/llama-4-scout:free',   // fast, great at JSON instructions
-  'openai/gpt-oss-20b:free',         // reliable JSON output
+// find-book: DB does matching, AI just writes 2-3 sentence explanation
+const FIND_BOOK_EXPLAIN_MODELS = [
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'google/gemma-4-31b-it:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
 ];
 
 function modelCandidates() {
@@ -127,10 +124,10 @@ async function chat(messages, lang = 'en') {
     role: m.role === 'assistant' ? 'assistant' : 'user',
     content: String(m.content || '').slice(0, 2000)
   }));
-  const lastUser = [...trimmed].reverse().find((m) => m.role === 'user');
-  const replyLang = detectLanguage(lastUser?.content || '', lang);
+  // Use UI language directly — don't override with detectLanguage.
+  // The system prompt already enforces the reply language strictly.
   const payloadMessages = [
-    { role: 'system', content: bookAssistantSystemPrompt(replyLang) },
+    { role: 'system', content: bookAssistantSystemPrompt(lang) },
     ...trimmed
   ];
 
@@ -160,16 +157,15 @@ async function chat(messages, lang = 'en') {
 
     if (res.ok) {
       const data = await res.json();
-      const msg = data.choices?.[0]?.message || {};
-      // Some reasoning models return content:null and put answer in reasoning field
-      const raw = msg.content || msg.reasoning || '';
-      const reply = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      // NEVER use reasoning/thinking tokens as the reply — they are the model's
+      // internal thought process, not the answer. If content is null, skip.
+      const reply = (data.choices?.[0]?.message?.content || '').trim();
       if (reply) return reply;
-      lastError = 'Empty response';
+      lastError = 'content:null (reasoning-only model, skipping)';
       continue;
     }
 
-    // Any error (429 rate-limit, 404 model gone, 5xx): try the next model.
+    // 429 rate-limit, 404 model gone, 5xx: try the next model.
     lastError = `OpenRouter ${res.status}`;
   }
 
@@ -272,8 +268,8 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
     `are relevant to the user's question. Be warm and encouraging. ` +
     `${langInstruction[lang] || langInstruction.en}`;
 
-  // Try models that reliably return plain text (no JSON parsing needed)
-  const explainCandidates = ['nvidia/nemotron-3-super-120b-a12b:free', 'openrouter/free'];
+  // Instruction-tuned models that return real content (no reasoning-only models)
+  const explainCandidates = FIND_BOOK_EXPLAIN_MODELS.slice(0, 2);
 
   for (const m of explainCandidates) {
     const ac = new AbortController();
@@ -300,8 +296,7 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
 
     if (!res.ok) continue;
     const data = await res.json();
-    const msg = data.choices?.[0]?.message || {};
-    const reply = (msg.content || msg.reasoning || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    const reply = (data.choices?.[0]?.message?.content || '').trim();
     if (reply) return { reply, books: booksToShow };
   }
 

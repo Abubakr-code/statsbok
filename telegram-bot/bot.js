@@ -591,12 +591,13 @@ async function sendResultsPage(chatId, state, deleteLoadingId) {
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── AI chat ───────────────────────────────────────────────────────────────────
-// Max 3 models × 8s = 24s total — keeps Telegram response fast
+// Max 3 models × 8s = 24s total — instruction-tuned models only (no reasoning-only)
+// openrouter/free is excluded — routes to random models that ignore language instructions
 const AI_MODELS_FAST = [
-  'nvidia/nemotron-3-super-120b-a12b:free', // fast (~4s), reliably returns content
-  'openrouter/free',                          // auto-routes, usually fast
-  'openai/gpt-oss-120b:free',                 // reliable fallback
-].slice(0, 3);
+  'meta-llama/llama-3.3-70b-instruct:free',  // best multilingual, great Uzbek
+  'google/gemma-4-31b-it:free',              // instruction-tuned, good language follow
+  'nvidia/nemotron-3-super-120b-a12b:free',  // fast speed fallback
+];
 
 async function callAI(chatId) {
   if (!OPENROUTER_CHAT_API_KEY) throw new Error('OPENROUTER_CHAT_API_KEY yo\'q');
@@ -626,11 +627,10 @@ async function callAI(chatId) {
       clearTimeout(tid);
       if (res.ok) {
         const data = await res.json();
-        const msg = data.choices?.[0]?.message || {};
-        // Some reasoning models return content:null — fall back to reasoning field
-        const reply = (msg.content || msg.reasoning || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+        // Never use reasoning tokens as reply — they are the model's thinking process
+        const reply = (data.choices?.[0]?.message?.content || '').trim();
         if (reply) { state.aiHistory.push({ role: 'assistant', content: reply }); return reply; }
-        lastErr = 'Bo\'sh javob';
+        lastErr = 'Bo\'sh javob (reasoning-only model, skipping)';
       } else {
         lastErr = `${res.status}`;
       }
@@ -668,10 +668,9 @@ async function aiOneShot(userContent, lang = 'uz') {
       clearTimeout(tid);
       if (res.ok) {
         const data = await res.json();
-        const msg = data.choices?.[0]?.message || {};
-        const reply = (msg.content || msg.reasoning || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+        const reply = (data.choices?.[0]?.message?.content || '').trim();
         if (reply) return reply;
-        lastErr = 'Bo\'sh javob';
+        lastErr = 'Bo\'sh javob (reasoning-only model)';
       } else {
         lastErr = `${res.status}`;
       }
