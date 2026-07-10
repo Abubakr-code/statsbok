@@ -97,6 +97,7 @@ async function tryGroq(payloadMessages, timeoutMs = 8000) {
   for (const model of GROQ_MODELS) {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), timeoutMs);
+    let data;
     try {
       const res = await fetch(GROQ_URL, {
         method: 'POST',
@@ -107,11 +108,12 @@ async function tryGroq(payloadMessages, timeoutMs = 8000) {
         body: JSON.stringify({ model, max_tokens: 400, messages: payloadMessages }),
         signal: ac.signal
       });
-      const data = await res.json();
+      if (!res.ok) { clearTimeout(timer); continue; }
+      data = await res.json();
       clearTimeout(timer);
-      const reply = (data?.choices?.[0]?.message?.content || '').trim();
-      if (reply) return reply;
-    } catch { clearTimeout(timer); }
+    } catch { clearTimeout(timer); continue; }
+    const reply = (data?.choices?.[0]?.message?.content || '').trim();
+    if (reply) return reply;
   }
   return null;
 }

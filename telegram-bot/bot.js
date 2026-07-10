@@ -13,7 +13,9 @@ const REQUIRE_CHANNEL = process.env.REQUIRE_CHANNEL === 'true';
 
 const OPENROUTER_URL          = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_CHAT_API_KEY = process.env.OPENROUTER_CHAT_API_KEY;
-const OPENROUTER_CHAT_MODEL   = process.env.OPENROUTER_CHAT_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free';
+const OPENROUTER_CHAT_MODEL   = process.env.OPENROUTER_CHAT_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
+const GROQ_API_KEY_BOT        = process.env.GROQ_API_KEY;
+const GROQ_URL_BOT            = 'https://api.groq.com/openai/v1/chat/completions';
 
 const AI_FREE_MODELS = [
   OPENROUTER_CHAT_MODEL,
@@ -591,13 +593,34 @@ async function sendResultsPage(chatId, state, deleteLoadingId) {
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── AI chat ───────────────────────────────────────────────────────────────────
-// Max 3 models × 8s = 24s total — instruction-tuned models only (no reasoning-only)
-// openrouter/free is excluded — routes to random models that ignore language instructions
 const AI_MODELS_FAST = [
-  'meta-llama/llama-3.3-70b-instruct:free',  // best multilingual, great Uzbek
-  'google/gemma-4-31b-it:free',              // instruction-tuned, good language follow
-  'nvidia/nemotron-3-super-120b-a12b:free',  // fast speed fallback
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'meta-llama/llama-3.2-3b-instruct:free',
+  'mistralai/mistral-7b-instruct:free',
 ];
+
+async function tryGroqBot(messages, timeoutMs = 8000) {
+  if (!GROQ_API_KEY_BOT) return null;
+  for (const model of ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']) {
+    const ac = new AbortController();
+    const tid = setTimeout(() => ac.abort(), timeoutMs);
+    let data;
+    try {
+      const res = await fetch(GROQ_URL_BOT, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${GROQ_API_KEY_BOT}` },
+        body: JSON.stringify({ model, max_tokens: 400, messages }),
+        signal: ac.signal
+      });
+      if (!res.ok) { clearTimeout(tid); continue; }
+      data = await res.json();
+      clearTimeout(tid);
+    } catch { clearTimeout(tid); continue; }
+    const reply = (data?.choices?.[0]?.message?.content || '').trim();
+    if (reply) return reply;
+  }
+  return null;
+}
 
 async function callAI(chatId) {
   if (!OPENROUTER_CHAT_API_KEY) throw new Error('OPENROUTER_CHAT_API_KEY yo\'q');
@@ -637,6 +660,9 @@ async function callAI(chatId) {
     if (reply) { state.aiHistory.push({ role: 'assistant', content: reply }); return reply; }
     lastErr = 'Bo\'sh javob (reasoning-only)';
   }
+  // Groq fallback
+  const groqReply = await tryGroqBot(messages);
+  if (groqReply) { state.aiHistory.push({ role: 'assistant', content: groqReply }); return groqReply; }
   throw new Error(lastErr);
 }
 
@@ -677,6 +703,9 @@ async function aiOneShot(userContent, lang = 'uz') {
     if (reply) return reply;
     lastErr = 'Bo\'sh javob (reasoning-only)';
   }
+  // Groq fallback
+  const groqReply = await tryGroqBot(messages);
+  if (groqReply) return groqReply;
   throw new Error(lastErr);
 }
 
