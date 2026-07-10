@@ -193,83 +193,53 @@ async function moodSearch(mood, lang = 'en') {
 }
 
 /**
- * Book Oracle: finds books from DB, uses AI only for a short explanation.
- * No JSON parsing from AI — DB search handles matching, AI just explains.
+ * Book Oracle: AI identifies the book/source for ANY quote or question
+ * using its own training knowledge — NOT limited to the database.
+ * DB results are provided as extra context if available.
  * Returns { reply: string, books: Array }
  */
 async function findBookForQuestion(question, history = [], dbResults = [], topBooks = [], lang = 'uz') {
-  const noBookMsg = {
-    uz: "Bu mavzu bo'yicha hozircha mos kitob topilmadi.",
-    en: 'No matching book found for this topic yet.',
-    ru: 'Подходящая книга по этой теме пока не найдена.'
-  };
-  const suggestMsg = {
-    uz: "Quyidagi kitoblar sizning savolingizga tegishli bo'lishi mumkin:",
-    en: 'These books may be helpful for your question:',
-    ru: 'Эти книги могут быть полезны для вашего вопроса:'
-  };
-
-  // Build matched books from DB search results (reliable, no AI needed)
-  const seen = new Set();
-  const matchedBooks = [];
-  for (const r of dbResults.slice(0, 5)) {
-    const b = r.book;
-    if (!b) continue;
-    const id = String(b.id || b._id || '');
-    if (id && seen.has(id)) continue;
-    if (id) seen.add(id);
-    matchedBooks.push({
-      id,
-      title: b.title || '',
-      author: b.author || '',
-      page: r.pageNumber || null,
-      reason: '',
-      coverImage: b.coverImage || null,
-      affiliateLink: b.affiliateLink || null
-    });
-  }
-
-  // If no keyword matches, fall back to top popular books
-  const booksToShow = matchedBooks.length
-    ? matchedBooks
-    : topBooks.slice(0, 3).map((b) => ({
-        id: String(b._id || ''),
-        title: b.title || '',
-        author: b.author || '',
-        page: null,
-        reason: '',
-        coverImage: b.coverImage || null,
-        affiliateLink: b.affiliateLink || null
-      })).filter((b) => b.title);
-
-  if (!booksToShow.length) {
-    return { reply: noBookMsg[lang] || noBookMsg.en, books: [] };
-  }
-
-  // Ask AI for a SHORT plain-text explanation (no JSON, no complex formatting)
-  // Any model can write 2 sentences — much more reliable than JSON generation
   const apiKey = process.env.OPENROUTER_CHAT_API_KEY || process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return { reply: suggestMsg[lang] || suggestMsg.en, books: booksToShow };
-  }
 
-  const langInstruction = {
-    uz: 'Reply in Uzbek (Latin script, 2-3 sentences max).',
-    en: 'Reply in English (2-3 sentences max).',
-    ru: 'Reply in Russian (2-3 sentences max).'
+  const langMap = {
+    uz: 'Uzbek (Latin script)',
+    ru: 'Russian',
+    en: 'English'
   };
-  const bookTitles = booksToShow.map((b) => `"${b.title}" (${b.author})`).join(', ');
-  const systemMsg =
-    `You are a helpful librarian. Briefly explain in 2-3 sentences why the book(s) ${bookTitles} ` +
-    `are relevant to the user's question. Be warm and encouraging. ` +
-    `${langInstruction[lang] || langInstruction.en}`;
+  const replyLang = langMap[lang] || 'Uzbek (Latin script)';
 
-  // Instruction-tuned models that return real content (no reasoning-only models)
-  const explainCandidates = FIND_BOOK_EXPLAIN_MODELS.slice(0, 2);
+  // Provide DB books as extra context so AI can reference them if relevant
+  const dbContext = dbResults.slice(0, 6).map((r) => {
+    const b = r.book;
+    return b ? `"${b.title}" by ${b.author}` : null;
+  }).filter(Boolean).join('; ');
 
-  for (const m of explainCandidates) {
+  const systemPrompt =
+    `You are "StatBooks Oracle" — an expert literary assistant who identifies books from quotes and topics.\n` +
+    `CRITICAL: Reply ONLY in ${replyLang}. Never switch to English or any other language.\n\n` +
+    `When the user sends a QUOTE: identify which book it is from, who wrote it, and briefly why it is significant.\n` +
+    `When the user sends a TOPIC/QUESTION: recommend 1-2 specific real books that best cover that topic.\n\n` +
+    `Format your reply as plain conversational text (2-4 sentences). Mention the book title in **bold** and author name.\n` +
+    `If you genuinely do not know the source of a quote, say so honestly — do NOT invent a title.\n` +
+    (dbContext ? `\nBooks available in our library for reference: ${dbContext}\n` : '');
+
+  const historySlice = (history || []).slice(-4).map((m) => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: String(m.content || '').slice(0, 600)
+  }));
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...historySlice,
+    { role: 'user', content: question }
+  ];
+
+  // Try up to 3 models, 8s each = 24s max (under Netlify 26s limit)
+  const candidates = FIND_BOOK_EXPLAIN_MODELS.slice(0, 3);
+
+  for (const m of candidates) {
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 8000); // 8s covers headers + body
+    const timer = setTimeout(() => ac.abort(), 8000);
     let data;
     try {
       const res = await fetch(OPENROUTER_URL, {
@@ -280,11 +250,7 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
           'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
           'X-Title': 'StatBooks'
         },
-        body: JSON.stringify({
-          model: m,
-          max_tokens: 150,
-          messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: question }]
-        }),
+        body: JSON.stringify({ model: m, max_tokens: 300, messages }),
         signal: ac.signal
       });
       if (!res.ok) { clearTimeout(timer); continue; }
@@ -293,11 +259,33 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
     } catch { clearTimeout(timer); continue; }
 
     const reply = (data?.choices?.[0]?.message?.content || '').trim();
-    if (reply) return { reply, books: booksToShow };
+    if (!reply) continue;
+
+    // Also return any DB books that match — as additional links the user can open
+    const dbBooks = dbResults.slice(0, 3).map((r) => {
+      const b = r.book;
+      if (!b) return null;
+      return {
+        id: String(b.id || b._id || ''),
+        title: b.title || '',
+        author: b.author || '',
+        page: r.pageNumber || null,
+        reason: '',
+        coverImage: b.coverImage || null,
+        affiliateLink: b.affiliateLink || null
+      };
+    }).filter((b) => b && b.title);
+
+    return { reply, books: dbBooks };
   }
 
-  // AI failed → return books with a simple default reply (still useful!)
-  return { reply: suggestMsg[lang] || suggestMsg.en, books: booksToShow };
+  // If AI completely unavailable, return empty with error message
+  const errMsg = {
+    uz: 'AI hozir javob bera olmadi. Birozdan so\'ng urinib ko\'ring.',
+    ru: 'AI сейчас не может ответить. Попробуйте чуть позже.',
+    en: 'AI is unavailable right now. Please try again shortly.'
+  };
+  throw new Error(errMsg[lang] || errMsg.uz);
 }
 
 module.exports = { recommend, context, moodSearch, chat, findBookForQuestion };

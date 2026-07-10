@@ -62,9 +62,8 @@ async function findBook(req, res, next) {
     const result = await ai.findBookForQuestion(q, messages || [], dbResults, topBooks, resolvedLang);
     res.json(result);
   } catch (err) {
-    const isAiDown = /unavailable|OpenRouter|OPENROUTER_API_KEY/i.test(err.message);
-    if (isAiDown) return res.status(503).json({ error: 'ai_unavailable', message: err.message });
-    next(err);
+    // findBookForQuestion throws with user-friendly message when AI is down
+    return res.status(503).json({ reply: err.message, books: [] });
   }
 }
 

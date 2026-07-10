@@ -75,10 +75,11 @@ export default function AiBookOracle() {
     setResults(null);
     try {
       const { data } = await api.post('/ai/find-book', { question: q.trim(), lang });
+      // 503 comes with { reply, books:[] } when AI is temporarily down
       setResults(data);
     } catch (err) {
-      const status = err?.response?.status;
-      const reply = status === 503 ? t('ai.disabled') : t('ai.error');
+      const serverReply = err?.response?.data?.reply;
+      const reply = serverReply || t('ai.error');
       setResults({ reply, books: [] });
     } finally {
       setLoading(false);
