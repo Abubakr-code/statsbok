@@ -97,10 +97,16 @@ export default function AiChat() {
       if (!mountedRef.current) return;
       const status = err?.response?.status;
       const serverMsg = err?.response?.data?.message || '';
-      const msg =
-        status === 503 || /OPENROUTER|unavailable/i.test(serverMsg)
-          ? t('ai.disabled')
-          : t('ai.error');
+      let msg;
+      if (status === 503 || /OPENROUTER|unavailable/i.test(serverMsg)) {
+        msg = t('ai.disabled');
+      } else if (status === 429) {
+        msg = lang === 'uz' ? 'Juda ko\'p so\'rov yuborildi. 1 daqiqa kutib qayta urinib ko\'ring.' :
+              lang === 'ru' ? 'Слишком много запросов. Подождите минуту и попробуйте снова.' :
+              'Too many requests. Please wait a minute and try again.';
+      } else {
+        msg = t('ai.error');
+      }
       setMessages([...next, { role: 'assistant', content: msg }]);
     } finally {
       if (mountedRef.current) setLoading(false);
@@ -148,10 +154,10 @@ export default function AiChat() {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-5 z-50 flex h-[32rem] w-[23rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-amber/20 bg-ink-900 shadow-2xl shadow-black/60 animate-fade-in">
+        <div style={{ background: 'rgb(18 16 12)' }} className="fixed bottom-24 right-5 z-50 flex h-[32rem] w-[23rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-amber/20 shadow-2xl shadow-black/60 animate-fade-in opacity-100">
 
           {/* Header */}
-          <div className="flex items-center gap-3 border-b border-ink-700 bg-gradient-to-r from-ink-800 to-ink-900 px-4 py-3">
+          <div style={{ background: 'rgb(33 30 25)' }} className="flex items-center gap-3 border-b border-ink-700 px-4 py-3">
             <div className="relative shrink-0">
               <img src={LOGO} alt="StatBooks AI" className="h-10 w-10 rounded-full object-cover border border-amber/30" />
               <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-ink-900 bg-green-500" />
@@ -184,15 +190,17 @@ export default function AiChat() {
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 scroll-smooth">
+          <div ref={scrollRef} style={{ background: 'rgb(18 16 12)' }} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 scroll-smooth">
             {view.map((m, i) => (
               <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {m.role === 'assistant' && <BotAvatar />}
                 <div
+                  style={m.role === 'user'
+                    ? { background: 'rgb(232 169 74)', color: 'rgb(26 24 20)' }
+                    : { background: 'rgb(42 38 31)', color: 'rgb(245 240 232)', border: '1px solid rgb(57 52 43)' }
+                  }
                   className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
-                    m.role === 'user'
-                      ? 'rounded-br-sm bg-amber text-ink font-medium'
-                      : 'rounded-bl-sm bg-ink-800 text-parchment border border-ink-700'
+                    m.role === 'user' ? 'rounded-br-sm font-medium' : 'rounded-bl-sm'
                   }`}
                 >
                   <RichText text={m.content} />
@@ -224,7 +232,7 @@ export default function AiChat() {
           </div>
 
           {/* Input */}
-          <div className="border-t border-ink-700 bg-ink-900 p-3">
+          <div style={{ background: 'rgb(18 16 12)' }} className="border-t border-ink-700 p-3">
             <div className="flex items-end gap-2">
               <textarea
                 ref={inputRef}
@@ -233,7 +241,8 @@ export default function AiChat() {
                 onKeyDown={onKeyDown}
                 rows={1}
                 placeholder={t('ai.placeholder')}
-                className="input max-h-20 flex-1 resize-none py-2 text-sm bg-ink-800 border-ink-600 focus:border-amber/50"
+                style={{ background: 'rgb(33 30 25)', color: 'rgb(245 240 232)' }}
+                className="input max-h-20 flex-1 resize-none py-2 text-sm border-ink-600 focus:border-amber/50"
               />
               <button
                 onClick={send}

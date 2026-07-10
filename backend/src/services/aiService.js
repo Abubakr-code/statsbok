@@ -63,19 +63,17 @@ const OPENROUTER_CHAT_MODEL =
 
 // Netlify proxy = 26s limit. 3 models × 7s = 21s max, safe margin.
 // Only instruction-tuned models that return real content (NOT reasoning-only models).
-// openrouter/free is EXCLUDED — it routes to random models incl. Korean/Chinese
-// that ignore language instructions or return content:null.
 const FREE_MODEL_FALLBACKS = [
-  'meta-llama/llama-3.3-70b-instruct:free',  // best multilingual, great Uzbek
-  'google/gemma-4-31b-it:free',              // instruction-tuned, good language follow
-  'nvidia/nemotron-3-super-120b-a12b:free',  // fast fallback
+  'meta-llama/llama-3.3-70b-instruct:free',   // best multilingual, stable since Dec 2024
+  'meta-llama/llama-3.2-3b-instruct:free',    // fast small llama, reliable fallback
+  'mistralai/mistral-7b-instruct:free',       // very stable, good multilingual
 ];
 
 // find-book: DB does matching, AI just writes 2-3 sentence explanation
 const FIND_BOOK_EXPLAIN_MODELS = [
   'meta-llama/llama-3.3-70b-instruct:free',
-  'google/gemma-4-31b-it:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
+  'meta-llama/llama-3.2-3b-instruct:free',
+  'mistralai/mistral-7b-instruct:free',
 ];
 
 function modelCandidates() {
