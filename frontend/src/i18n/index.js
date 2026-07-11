@@ -140,7 +140,7 @@ const dict = {
     'ai.send': 'Yuborish',
     'ai.open': 'AI yordamchi',
     'ai.error': "AI hozir javob bera olmadi. Birozdan so'ng urinib ko'ring.",
-    'ai.disabled': 'AI hozir band yoki vaqtincha ishlamayapti. Biroz kutib qayta urinib ko'ring.',
+    "ai.disabled": "AI hozir band yoki vaqtincha ishlamayapti. Biroz kutib qayta urinib ko'ring.",
     'ai.oracle.heading': '📚 Kitob Oracle',
     'ai.oracle.desc': 'Savol bering — men sizning mavzuingiz bo‘yicha eng mos kitobni topib ko‘rsataman. 📖✨',
     'ai.oracle.placeholder': 'Masalan: O\'rta asrlar tarixi, Navoiy she\'rlari...',
