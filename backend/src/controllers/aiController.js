@@ -1,5 +1,5 @@
 const ai = require('../services/aiService');
-const { searchQuotesEnhanced } = require('../services/searchService');
+const Quote = require('../models/Quote');
 const Book = require('../models/Book');
 
 async function recommend(req, res, next) {
@@ -54,15 +54,21 @@ async function findBook(req, res, next) {
     if (!q || !String(q).trim()) return res.status(400).json({ error: 'question is required' });
 
     const resolvedLang = lang || 'uz';
-    const [dbResults, topBooks] = await Promise.all([
-      searchQuotesEnhanced(q, resolvedLang).catch(() => []),
-      Book.find({}).sort({ likes: -1, totalQuotes: -1 }).limit(40).lean().catch(() => [])
-    ]);
 
-    const result = await ai.findBookForQuestion(q, messages || [], dbResults, topBooks, resolvedLang);
+    // Fast simple DB quote search — 3s max, no AI, just context for the Oracle
+    const words = String(q).trim().split(/\s+/).filter((w) => w.length > 3).slice(0, 4);
+    const dbResultsPromise = words.length > 0
+      ? Quote.find({ $or: words.map((w) => ({ textNormalized: { $regex: w, $options: 'i' } })) })
+          .limit(6).populate('bookId').lean()
+          .then((docs) => docs.map((d) => ({ book: d.bookId, text: d.text, pageNumber: d.page })))
+          .catch(() => [])
+      : Promise.resolve([]);
+
+    const [dbResults] = await Promise.all([dbResultsPromise]);
+
+    const result = await ai.findBookForQuestion(q, messages || [], dbResults, [], resolvedLang);
     res.json(result);
   } catch (err) {
-    // findBookForQuestion throws with user-friendly message when AI is down
     return res.status(503).json({ reply: err.message, books: [] });
   }
 }

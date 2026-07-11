@@ -76,10 +76,9 @@ const FREE_MODEL_FALLBACKS = [
   'mistralai/mistral-7b-instruct:free',
 ];
 
-// find-book models
+// find-book: 2 models × 7s = 14s max (fast path, Groq fallback after)
 const FIND_BOOK_EXPLAIN_MODELS = [
   'meta-llama/llama-3.3-70b-instruct:free',
-  'meta-llama/llama-3.2-3b-instruct:free',
   'mistralai/mistral-7b-instruct:free',
 ];
 
@@ -273,12 +272,12 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
     { role: 'user', content: question }
   ];
 
-  // Try up to 3 models, 8s each = 24s max (under Netlify 26s limit)
-  const candidates = FIND_BOOK_EXPLAIN_MODELS.slice(0, 3);
+  // 2 models × 7s = 14s + Groq fallback 7s = 21s total (under Netlify 26s)
+  const candidates = FIND_BOOK_EXPLAIN_MODELS.slice(0, 2);
 
   for (const m of candidates) {
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 8000);
+    const timer = setTimeout(() => ac.abort(), 7000);
     let data;
     try {
       const res = await fetch(OPENROUTER_URL, {
