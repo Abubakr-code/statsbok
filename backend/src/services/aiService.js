@@ -231,39 +231,27 @@ async function moodSearch(mood, lang = 'en') {
 }
 
 /**
- * Book Oracle: AI identifies the book/source for ANY quote or question
- * using its own training knowledge — NOT limited to the database.
- * DB results are provided as extra context if available.
- * Returns { reply: string, books: Array }
+ * Book Oracle — PURE AI, no database at all.
+ * AI uses its own knowledge to identify any quote or recommend books.
+ * Returns { reply: string, books: [] }
  */
-async function findBookForQuestion(question, history = [], dbResults = [], topBooks = [], lang = 'uz') {
+async function findBookForQuestion(question, history = [], lang = 'uz') {
   const apiKey = process.env.OPENROUTER_CHAT_API_KEY || process.env.OPENROUTER_API_KEY;
 
-  const langMap = {
-    uz: 'Uzbek (Latin script)',
-    ru: 'Russian',
-    en: 'English'
-  };
+  const langMap = { uz: 'Uzbek (Latin script)', ru: 'Russian', en: 'English' };
   const replyLang = langMap[lang] || 'Uzbek (Latin script)';
 
-  // Provide DB books as extra context so AI can reference them if relevant
-  const dbContext = dbResults.slice(0, 6).map((r) => {
-    const b = r.book;
-    return b ? `"${b.title}" by ${b.author}` : null;
-  }).filter(Boolean).join('; ');
-
   const systemPrompt =
-    `You are "StatBooks Oracle" — an expert literary assistant who identifies books from quotes and topics.\n` +
-    `CRITICAL: Reply ONLY in ${replyLang}. Never switch to English or any other language.\n\n` +
-    `When the user sends a QUOTE: identify which book it is from, who wrote it, and briefly why it is significant.\n` +
-    `When the user sends a TOPIC/QUESTION: recommend 1-2 specific real books that best cover that topic.\n\n` +
-    `Format your reply as plain conversational text (2-4 sentences). Mention the book title in **bold** and author name.\n` +
-    `If you genuinely do not know the source of a quote, say so honestly — do NOT invent a title.\n` +
-    (dbContext ? `\nBooks available in our library for reference: ${dbContext}\n` : '');
+    `You are "StatBooks Oracle" — an expert literary assistant.\n` +
+    `CRITICAL: Reply ONLY in ${replyLang}. Never use any other language.\n\n` +
+    `When given a QUOTE: identify which book it is from, who wrote it, and why it matters.\n` +
+    `When given a TOPIC or QUESTION: recommend 1-2 specific real books that best cover it.\n\n` +
+    `Reply in plain text (2-4 sentences). Put book titles in **bold** and include the author name.\n` +
+    `If you truly do not know the source of a quote, say so — never invent titles.`;
 
   const historySlice = (history || []).slice(-4).map((m) => ({
     role: m.role === 'assistant' ? 'assistant' : 'user',
-    content: String(m.content || '').slice(0, 600)
+    content: String(m.content || '').slice(0, 500)
   }));
 
   const messages = [
@@ -272,10 +260,8 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
     { role: 'user', content: question }
   ];
 
-  // 2 models × 7s = 14s + Groq fallback 7s = 21s total (under Netlify 26s)
-  const candidates = FIND_BOOK_EXPLAIN_MODELS.slice(0, 2);
-
-  for (const m of candidates) {
+  // 2 OpenRouter models × 7s + 1 Groq × 7s = 21s max (fits Netlify 26s limit)
+  for (const m of FIND_BOOK_EXPLAIN_MODELS) {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 7000);
     let data;
@@ -297,44 +283,12 @@ async function findBookForQuestion(question, history = [], dbResults = [], topBo
     } catch { clearTimeout(timer); continue; }
 
     const reply = (data?.choices?.[0]?.message?.content || '').trim();
-    if (!reply) continue;
-
-    // Also return any DB books that match — as additional links the user can open
-    const dbBooks = dbResults.slice(0, 3).map((r) => {
-      const b = r.book;
-      if (!b) return null;
-      return {
-        id: String(b.id || b._id || ''),
-        title: b.title || '',
-        author: b.author || '',
-        page: r.pageNumber || null,
-        reason: '',
-        coverImage: b.coverImage || null,
-        affiliateLink: b.affiliateLink || null
-      };
-    }).filter((b) => b && b.title);
-
-    return { reply, books: dbBooks };
+    if (reply) return { reply, books: [] };
   }
 
-  // OpenRouter failed — try Groq as fallback
-  const groqReply = await tryGroq(messages, 8000);
-  if (groqReply) {
-    const dbBooks = dbResults.slice(0, 3).map((r) => {
-      const b = r.book;
-      if (!b) return null;
-      return {
-        id: String(b.id || b._id || ''),
-        title: b.title || '',
-        author: b.author || '',
-        page: r.pageNumber || null,
-        reason: '',
-        coverImage: b.coverImage || null,
-        affiliateLink: b.affiliateLink || null
-      };
-    }).filter((b) => b && b.title);
-    return { reply: groqReply, books: dbBooks };
-  }
+  // Groq fallback
+  const groqReply = await tryGroq(messages, 7000);
+  if (groqReply) return { reply: groqReply, books: [] };
 
   const errMsg = {
     uz: 'AI hozir javob bera olmadi. Birozdan so\'ng urinib ko\'ring.',
