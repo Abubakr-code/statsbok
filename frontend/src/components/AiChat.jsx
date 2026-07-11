@@ -5,55 +5,68 @@ import RichText from './RichText';
 
 const LOGO = '/logo.jpg';
 
-function BotAvatar({ size = 8 }) {
-  return (
+// Solid dark colors — no CSS variables, guaranteed opaque everywhere
+const BG_DARK   = '#121008';  // main panel & messages
+const BG_MID    = '#211E19';  // header & input area
+const BG_BUBBLE = '#2A261F';  // assistant bubble
+const CLR_TEXT  = '#F5F0E8';  // light text
+const CLR_AMBER = '#E8A94A';  // amber / user bubble
+const CLR_INK   = '#1A1814';  // dark text on amber
+
+function BotAvatar() {
+  const [err, setErr] = useState(false);
+  return err ? (
+    <div style={{ width: 32, height: 32, borderRadius: '50%', background: CLR_AMBER, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+      📚
+    </div>
+  ) : (
     <img
       src={LOGO}
-      alt="StatBooks AI"
-      className={`h-${size} w-${size} shrink-0 rounded-full object-cover border border-amber/30`}
+      alt="AI"
+      onError={() => setErr(true)}
+      style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${CLR_AMBER}44`, flexShrink: 0 }}
     />
   );
 }
 
 function TypingDots() {
   return (
-    <div className="mr-auto flex items-end gap-2 px-1">
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, padding: '0 4px' }}>
       <BotAvatar />
-      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-ink-700 px-4 py-3">
-        <span className="h-2 w-2 animate-bounce rounded-full bg-amber/70 [animation-delay:-0.3s]" />
-        <span className="h-2 w-2 animate-bounce rounded-full bg-amber/70 [animation-delay:-0.15s]" />
-        <span className="h-2 w-2 animate-bounce rounded-full bg-amber/70" />
+      <div style={{ display: 'flex', gap: 4, background: BG_BUBBLE, borderRadius: '16px 16px 16px 4px', padding: '10px 14px' }}>
+        {['-0.3s', '-0.15s', '0s'].map((d, i) => (
+          <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: `${CLR_AMBER}B3`, display: 'inline-block', animation: `bounce 1s infinite ${d}` }} />
+        ))}
       </div>
     </div>
   );
 }
 
 export default function AiChat() {
-  const t = useI18n((s) => s.t);
+  const t    = useI18n((s) => s.t);
   const lang = useI18n((s) => s.lang);
-  const [open, setOpen] = useState(false);
+
+  const [open,     setOpen]     = useState(false);
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [unread, setUnread] = useState(0);
-  const scrollRef = useRef(null);
-  const inputRef = useRef(null);
+  const [input,    setInput]    = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [unread,   setUnread]   = useState(0);
+  const [logoErr,  setLogoErr]  = useState(false);
+
+  const scrollRef  = useRef(null);
+  const inputRef   = useRef(null);
   const mountedRef = useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
 
   const greeting = { role: 'assistant', content: t('ai.greeting') };
-  const view = messages.length === 0 ? [greeting] : messages;
+  const view     = messages.length === 0 ? [greeting] : messages;
+
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, open, loading]);
 
   useEffect(() => {
-    if (open) {
-      setUnread(0);
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
+    if (open) { setUnread(0); setTimeout(() => inputRef.current?.focus(), 100); }
   }, [open]);
 
   async function sendText(text) {
@@ -67,8 +80,7 @@ export default function AiChat() {
     try {
       const { data } = await api.post('/ai/chat', { messages: next, lang });
       if (!mountedRef.current) return;
-      const reply = data.reply || t('ai.error');
-      setMessages([...next, { role: 'assistant', content: reply }]);
+      setMessages([...next, { role: 'assistant', content: data.reply || t('ai.error') }]);
       if (!open) setUnread((n) => n + 1);
     } catch (err) {
       if (!mountedRef.current) return;
@@ -78,9 +90,9 @@ export default function AiChat() {
       if (status === 503 || /OPENROUTER|unavailable/i.test(serverMsg)) {
         msg = t('ai.disabled');
       } else if (status === 429) {
-        msg = lang === 'uz' ? 'Juda ko\'p so\'rov yuborildi. 1 daqiqa kutib qayta urinib ko\'ring.' :
-              lang === 'ru' ? 'Слишком много запросов. Подождите минуту и попробуйте снова.' :
-              'Too many requests. Please wait a minute and try again.';
+        msg = lang === 'uz' ? 'Juda ko\'p so\'rov. 1 daqiqa kutib qayta urinib ko\'ring.'
+            : lang === 'ru' ? 'Слишком много запросов. Подождите минуту.'
+            : 'Too many requests. Wait a minute and retry.';
       } else {
         msg = t('ai.error');
       }
@@ -90,40 +102,58 @@ export default function AiChat() {
     }
   }
 
-  function send() { sendText(input); }
-
   function onKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(input); }
   }
 
-  function clearChat() {
-    setMessages([]);
-    setInput('');
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }
+  function clearChat() { setMessages([]); setInput(''); setTimeout(() => inputRef.current?.focus(), 50); }
 
   return (
     <>
+      <style>{`
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+        .aichat-panel { animation: aiFadeIn 0.25s ease-out; }
+        @keyframes aiFadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .aichat-scroll::-webkit-scrollbar { width: 4px; }
+        .aichat-scroll::-webkit-scrollbar-track { background: transparent; }
+        .aichat-scroll::-webkit-scrollbar-thumb { background: #3A3630; border-radius: 2px; }
+      `}</style>
+
       {/* Launcher button */}
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={t('ai.open')}
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-amber shadow-xl shadow-amber/30 transition-all duration-200 hover:scale-110 hover:shadow-amber/50 active:scale-95"
+        style={{
+          position: 'fixed', bottom: 20, right: 20, zIndex: 9999,
+          width: 56, height: 56, borderRadius: '50%',
+          border: `2px solid ${CLR_AMBER}`,
+          boxShadow: `0 0 20px ${CLR_AMBER}55`,
+          overflow: 'hidden', cursor: 'pointer',
+          background: BG_DARK,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = `0 0 28px ${CLR_AMBER}88`; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = `0 0 20px ${CLR_AMBER}55`; }}
       >
         {open ? (
-          <div className="flex h-full w-full items-center justify-center bg-amber">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1814" strokeWidth="2.5">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </div>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={CLR_INK} strokeWidth="2.5" style={{ background: CLR_AMBER, borderRadius: '50%', padding: 2, width: '100%', height: '100%' }}>
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        ) : logoErr ? (
+          <span style={{ fontSize: 26 }}>📚</span>
         ) : (
-          <img src={LOGO} alt="StatBooks AI" className="h-full w-full object-cover" />
+          <img src={LOGO} alt="AI" onError={() => setLogoErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         )}
         {!open && unread > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+          <span style={{
+            position: 'absolute', top: -4, right: -4,
+            width: 20, height: 20, borderRadius: '50%',
+            background: '#EF4444', color: '#fff',
+            fontSize: 10, fontWeight: 700,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: `2px solid ${BG_DARK}`,
+          }}>
             {unread}
           </span>
         )}
@@ -131,71 +161,87 @@ export default function AiChat() {
 
       {/* Chat panel */}
       {open && (
-        <div style={{ background: 'rgb(18 16 12)' }} className="fixed bottom-24 right-5 z-50 flex h-[32rem] w-[23rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-amber/20 shadow-2xl shadow-black/60 animate-fade-in opacity-100">
-
+        <div
+          className="aichat-panel"
+          style={{
+            position: 'fixed', bottom: 86, right: 20, zIndex: 9998,
+            width: 'min(368px, calc(100vw - 24px))',
+            height: '30rem',
+            display: 'flex', flexDirection: 'column',
+            borderRadius: 18,
+            border: `1px solid ${CLR_AMBER}33`,
+            background: BG_DARK,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+            overflow: 'hidden',
+          }}
+        >
           {/* Header */}
-          <div style={{ background: 'rgb(33 30 25)' }} className="flex items-center gap-3 border-b border-ink-700 px-4 py-3">
-            <div className="relative shrink-0">
-              <img src={LOGO} alt="StatBooks AI" className="h-10 w-10 rounded-full object-cover border border-amber/30" />
-              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-ink-900 bg-green-500" />
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            background: BG_MID,
+            borderBottom: `1px solid ${CLR_AMBER}22`,
+            padding: '12px 16px',
+            flexShrink: 0,
+          }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              {logoErr ? (
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: CLR_AMBER, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>📚</div>
+              ) : (
+                <img src={LOGO} alt="AI" onError={() => setLogoErr(true)} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${CLR_AMBER}44` }} />
+              )}
+              <span style={{ position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, borderRadius: '50%', background: '#22C55E', border: `2px solid ${BG_MID}` }} />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-display text-sm text-parchment">{t('ai.title')}</p>
-              <p className="text-xs text-green-400">● {t('ai.subtitle')}</p>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ color: CLR_TEXT, fontSize: 14, fontWeight: 600, margin: 0 }}>{t('ai.title')}</p>
+              <p style={{ color: '#22C55E', fontSize: 11, margin: 0 }}>● {t('ai.subtitle')}</p>
             </div>
-            <div className="flex items-center gap-1">
+            <div style={{ display: 'flex', gap: 4 }}>
               {messages.length > 0 && (
-                <button
-                  onClick={clearChat}
-                  title="Tozalash"
-                  className="rounded-lg p-1.5 text-parchment-faint hover:bg-ink-700 hover:text-parchment transition-colors"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
-                  </svg>
+                <button onClick={clearChat} title="Tozalash" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8A8270', padding: 6, borderRadius: 8, display: 'flex' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#3A3630'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
                 </button>
               )}
-              <button
-                onClick={() => setOpen(false)}
-                className="rounded-lg p-1.5 text-parchment-faint hover:bg-ink-700 hover:text-parchment transition-colors"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
+              <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8A8270', padding: 6, borderRadius: 8, display: 'flex' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#3A3630'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 6l12 12M18 6L6 18" /></svg>
               </button>
             </div>
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} style={{ background: 'rgb(18 16 12)' }} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 scroll-smooth">
+          <div ref={scrollRef} className="aichat-scroll" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12, background: BG_DARK }}>
             {view.map((m, i) => (
-              <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-end', gap: 8, justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
                 {m.role === 'assistant' && <BotAvatar />}
-                <div
-                  style={m.role === 'user'
-                    ? { background: 'rgb(232 169 74)', color: 'rgb(26 24 20)' }
-                    : { background: 'rgb(42 38 31)', color: 'rgb(245 240 232)', border: '1px solid rgb(57 52 43)' }
-                  }
-                  className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
-                    m.role === 'user' ? 'rounded-br-sm font-medium' : 'rounded-bl-sm'
-                  }`}
-                >
+                <div style={{
+                  maxWidth: '78%',
+                  borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                  padding: '10px 14px',
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  background: m.role === 'user' ? CLR_AMBER : BG_BUBBLE,
+                  color: m.role === 'user' ? CLR_INK : CLR_TEXT,
+                  border: m.role === 'assistant' ? `1px solid #39342B` : 'none',
+                  fontWeight: m.role === 'user' ? 500 : 400,
+                }}>
                   <RichText text={m.content} />
                 </div>
                 {m.role === 'user' && (
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-700 text-base select-none">
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#3A3630', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
                     👤
-                  </span>
+                  </div>
                 )}
               </div>
             ))}
-
             {loading && <TypingDots />}
           </div>
 
           {/* Input */}
-          <div style={{ background: 'rgb(18 16 12)' }} className="border-t border-ink-700 p-3">
-            <div className="flex items-end gap-2">
+          <div style={{ background: BG_MID, borderTop: `1px solid #39342B`, padding: '12px' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
               <textarea
                 ref={inputRef}
                 value={input}
@@ -203,15 +249,39 @@ export default function AiChat() {
                 onKeyDown={onKeyDown}
                 rows={1}
                 placeholder={t('ai.placeholder')}
-                style={{ background: 'rgb(33 30 25)', color: 'rgb(245 240 232)' }}
-                className="input max-h-20 flex-1 resize-none py-2 text-sm border-ink-600 focus:border-amber/50"
+                style={{
+                  flex: 1,
+                  background: BG_DARK,
+                  color: CLR_TEXT,
+                  border: `1px solid #39342B`,
+                  borderRadius: 12,
+                  padding: '8px 12px',
+                  fontSize: 13,
+                  resize: 'none',
+                  outline: 'none',
+                  maxHeight: 80,
+                  fontFamily: 'inherit',
+                  lineHeight: 1.5,
+                }}
+                onFocus={(e) => e.target.style.borderColor = `${CLR_AMBER}80`}
+                onBlur={(e) => e.target.style.borderColor = '#39342B'}
               />
               <button
-                onClick={send}
+                onClick={() => sendText(input)}
                 disabled={loading || !input.trim()}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber text-ink transition-all hover:bg-amber/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  width: 36, height: 36,
+                  borderRadius: 10,
+                  background: CLR_AMBER,
+                  border: 'none',
+                  cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
+                  opacity: input.trim() && !loading ? 1 : 0.4,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'opacity 0.2s',
+                }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={CLR_INK} strokeWidth="2.5">
                   <path d="M22 2L11 13M22 2l-7 20-4-9-9-4z" />
                 </svg>
               </button>

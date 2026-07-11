@@ -101,8 +101,6 @@ export default function AiBookOracle() {
     setTimeout(() => inputRef.current?.focus(), 50);
   }
 
-  const chips = t('ai.oracle.chips').split('|').filter(Boolean);
-
   return (
     <div className="mx-auto mt-10 w-full max-w-2xl text-left">
       <div className="relative overflow-hidden rounded-2xl border border-amber/20 bg-gradient-to-br from-amber/8 via-ink-800/80 to-ink-900 p-5 shadow-lg">
@@ -117,22 +115,6 @@ export default function AiBookOracle() {
             <p className="mt-0.5 text-sm leading-relaxed text-parchment-dim">{t('ai.oracle.desc')}</p>
           </div>
         </div>
-
-        {/* Quick-pick chips — hidden while loading or showing results */}
-        {!results && !loading && chips.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {chips.map((chip) => (
-              <button
-                key={chip}
-                type="button"
-                onClick={() => { setQuestion(chip); fetchBooks(chip); }}
-                className="rounded-full border border-amber/25 bg-amber/8 px-3 py-1 text-xs text-amber transition-colors hover:bg-amber/15"
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Input row */}
         <form onSubmit={handleSubmit} className="relative mt-4 flex gap-2">
