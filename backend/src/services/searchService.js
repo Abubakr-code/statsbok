@@ -9,10 +9,17 @@ const MIN_SCORE = 0.5;
 const RESULT_LIMIT = 20;
 const ENABLE_AI_SEARCH = process.env.ENABLE_AI_SEARCH !== 'false';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+// Prefer whichever key is configured. The chat key is proven-working in
+// production, so try it first, then the dedicated search key, then the generic.
 const OPENROUTER_SEARCH_API_KEY =
+  process.env.OPENROUTER_CHAT_API_KEY ||
   process.env.OPENROUTER_SEARCH_API_KEY ||
-  process.env.OPENROUTER_API_KEY ||
-  process.env.OPENROUTER_CHAT_API_KEY;
+  process.env.OPENROUTER_API_KEY;
+
+// Groq — fast, reliable free fallback for AI search (separate provider/key).
+const GROQ_URL_SEARCH = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_API_KEY_SEARCH = process.env.GROQ_API_KEY;
+const GROQ_SEARCH_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 const OPENROUTER_SEARCH_MODEL =
   process.env.OPENROUTER_SEARCH_MODEL || process.env.OPENROUTER_MODEL || 'google/gemma-4-31b-it:free';
 const GOOGLE_BOOKS_API = 'https://www.googleapis.com/books/v1/volumes';
@@ -692,8 +699,120 @@ async function getOrCreateAiBook(aiBookData) {
 }
 
 /**
- * AI-powered search using OpenRouter (primary search engine)
- * Uses free AI models from OpenRouter - responds in the user's language
+ * Parse the raw AI JSON reply into a normalized array of book objects.
+ * Tolerant of markdown fences, single objects, and alternate field names.
+ */
+function parseAiSearchBooks(content, lang) {
+  const parse = (jsonStr) => {
+    let books = JSON.parse(jsonStr);
+    if (!Array.isArray(books)) books = [books];
+    return books;
+  };
+  let books;
+  try {
+    books = parse(content);
+  } catch {
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return [];
+    try { books = parse(jsonMatch[0]); } catch { return []; }
+  }
+  if (!Array.isArray(books) || books.length === 0) return [];
+
+  const confidenceToNum = { high: 0.9, medium: 0.75, low: 0.6 };
+  return books.map((b) => {
+    if (typeof b === 'string') {
+      return { title: b, author: 'Unknown', year: null, description: '', isbn: null, confidence: 'medium', confidenceNum: 0.75, quote: '', themes: [], genre: '', pages: null, rating: null, language: lang, titleOriginal: null };
+    }
+    if (b && typeof b === 'object') {
+      return {
+        title: b.title || b.name || b.kitob || b.nomi || '',
+        titleOriginal: b.titleOriginal || b.original_title || null,
+        author: b.author || b.writer || b.muallif || b.yozuvchi || 'Unknown',
+        year: b.year || b.yil || null,
+        description: b.description || b.desc || b.tavsif || b.about || '',
+        isbn: b.isbn || b.ISBN || null,
+        confidence: b.confidence || 'medium',
+        confidenceNum: confidenceToNum[b.confidence] || 0.75,
+        quote: b.quote || b.iqtibos || '',
+        themes: Array.isArray(b.themes) ? b.themes : (Array.isArray(b.mavzular) ? b.mavzular : []),
+        genre: b.genre || b.janr || '',
+        pages: b.pages || b.sahifalar || null,
+        rating: b.rating || b.reyting || null,
+        language: b.language || lang
+      };
+    }
+    return null;
+  }).filter((b) => b && b.title && typeof b.title === 'string' && b.title.trim());
+}
+
+/**
+ * Attach stable ids + cover images to AI books (write-through cache only —
+ * the DB is never the source of the result) and format them for the client.
+ */
+async function finalizeAiSearchBooks(books, lang) {
+  if (!books || books.length === 0) return [];
+
+  const booksInDb = await Promise.all(
+    books.slice(0, 25).map(async (book) => {
+      try {
+        const aiBook = await getOrCreateAiBook({
+          title: book.title || '',
+          author: book.author || '',
+          year: book.year || null,
+          description: book.description || '',
+          language: book.language || lang
+        });
+        if (aiBook?._id && book.quote) {
+          saveAiQuoteForBook(aiBook._id, book.quote, book.language || lang).catch(() => {});
+        }
+        return { ...book, dbBook: aiBook };
+      } catch {
+        return { ...book, dbBook: null };
+      }
+    })
+  );
+
+  // Fetch covers in the background so the response isn't blocked.
+  booksInDb.forEach((book) => {
+    if (!book.dbBook?._id || book.dbBook?.coverImage) return;
+    fetchBookCover(book.title, book.author)
+      .then((cover) => {
+        if (cover) Book.findByIdAndUpdate(book.dbBook._id, { coverImage: cover }).catch(() => {});
+      })
+      .catch(() => {});
+  });
+
+  return booksInDb.map((book, idx) => ({
+    quoteId: `ai-${Date.now()}-${idx}`,
+    text: book.quote || book.description || '',
+    pageNumber: null,
+    confidence: normalizeConfidence(book.confidenceNum || 0.75, 0.75),
+    score: 0,
+    book: {
+      id: book.dbBook?._id || null,
+      title: book.title || '',
+      titleOriginal: book.titleOriginal || null,
+      titleUz: book.dbBook?.titleUz || null,
+      author: book.author || '',
+      authorUz: book.dbBook?.authorUz || null,
+      language: book.language || lang,
+      year: book.year || null,
+      isbn: book.isbn || null,
+      genre: book.genre || null,
+      pages: book.pages || null,
+      themes: book.themes || [],
+      rating: book.rating || null,
+      coverImage: book.dbBook?.coverImage || null,
+      affiliateLink: null,
+      likes: book.dbBook?.likes || 0
+    },
+    source: 'ai'
+  }));
+}
+
+/**
+ * AI-powered search using OpenRouter (primary) + Groq (fallback).
+ * Uses free AI models — responds in the user's language.
  */
 async function aiSearchBooks(query, lang = 'en') {
   if (!ENABLE_AI_SEARCH) return [];
@@ -715,19 +834,19 @@ async function aiSearchBooks(query, lang = 'en') {
   const systemPrompt = `You are a world-class book search engine. The user's query language is: ${langName}.
 ${langInstruction[lang] || langInstruction.en}
 
-Your task: Given a search query (author name, exact quote, topic, genre, or book title), find at least 20 REAL books.
+Your task: Given a search query (author name, exact quote, topic, genre, or book title), find 8-12 REAL books.
 
 IMPORTANT RULES:
 1. Books MUST be REAL books with REAL authors. NEVER invent or fabricate books.
 2. If the query is an AUTHOR NAME, list ALL the famous books BY that author (and if not enough, add books by similar/related authors).
-3. If the query is a QUOTE, first identify the EXACT book the quote is from, then suggest similar books.
+3. If the query is a QUOTE, the FIRST book MUST be the exact source the quote is from (identify it precisely), then suggest similar books.
 4. If the query is a TOPIC or GENRE, suggest the best, most popular books in that category.
-5. ALWAYS return AT LEAST 20 books. Never return fewer than 20. If one author has fewer books, fill the rest with closely related authors and books on the same theme.
+5. Return 8-12 books. If one author has fewer, fill the rest with closely related authors/themes.
 6. Return ONLY a valid JSON array — no markdown blocks, no extra text, no explanation.
 7. For multi-word names (e.g. "Abu Ali ibn Sino"), match the full person, not a single word from the name.
 8. UZBEK QUERIES: strongly prioritize Uzbek, Turkic, and Central Asian authors first (Alisher Navoiy, Abdulla Qodiriy, Cho'lpon, Abdulla Avloniy, Oybek, G'afur G'ulom, Said Ahmad, O'tkir Hoshimov, Erkin Vohidov, Abdulla Oripov, Tohir Malik, Muhamad Yusuf), then include world classics.
 
-Keep each book object SHORT so you can list all 20 quickly.
+Keep each book object SHORT so you can list them quickly.
 REQUIRED JSON fields for each book:
 {
   "title": "Book title in query language",
@@ -740,7 +859,7 @@ REQUIRED JSON fields for each book:
   "confidence": "high, medium, or low"
 }`;
 
-  const userMsg = `Search for books related to: "${query}". Find AT LEAST 20 real books. Respond in ${langName}.`;
+  const userMsg = `Search for books related to: "${query}". Find 8-12 real books. Respond in ${langName}.`;
 
   // Only confirmed-working FREE models (verified July 2026). Fast + reliable
   // first. The 120B nemotron was too slow (>20s) and got cut off, returning
@@ -758,7 +877,7 @@ REQUIRED JSON fields for each book:
     if (isModelCoolingDown(model)) continue; // skip rate-limited model
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s per model
+      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s per model
       const res = await fetch(OPENROUTER_URL, {
         method: 'POST',
         headers: {
@@ -769,7 +888,7 @@ REQUIRED JSON fields for each book:
         },
         body: JSON.stringify({
           model,
-          max_tokens: 2500,
+          max_tokens: 1500,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userMsg }
@@ -782,125 +901,9 @@ REQUIRED JSON fields for each book:
       if (res.ok) {
         const data = await res.json();
         const content = data.choices?.[0]?.message?.content || '';
-
-        const parseBooks = (jsonStr) => {
-          let books = JSON.parse(jsonStr);
-          if (!Array.isArray(books)) books = [books];
-          return books;
-        };
-
-        let books;
-        try {
-          books = parseBooks(content);
-        } catch {
-          const jsonMatch = content.match(/\[[\s\S]*\]/);
-          if (jsonMatch) {
-            try {
-              books = parseBooks(jsonMatch[0]);
-            } catch {
-              continue;
-            }
-          } else {
-            continue;
-          }
-        }
-
-        // Normalize book objects (handle different field name conventions)
-        if (!Array.isArray(books) || books.length === 0) continue;
-
-        const confidenceToNum = { high: 0.9, medium: 0.75, low: 0.6 };
-        books = books.map((b) => {
-          if (typeof b === 'string') {
-            return { title: b, author: 'Unknown', year: null, description: '', isbn: null, confidence: 'medium', quote: '', themes: [], genre: '', pages: null, rating: null, language: lang, titleOriginal: null };
-          }
-          if (b && typeof b === 'object') {
-            return {
-              title: b.title || b.name || b.kitob || b.nomi || '',
-              titleOriginal: b.titleOriginal || b.original_title || null,
-              author: b.author || b.writer || b.muallif || b.yozuvchi || 'Unknown',
-              year: b.year || b.yil || null,
-              description: b.description || b.desc || b.tavsif || b.about || '',
-              isbn: b.isbn || b.ISBN || null,
-              confidence: b.confidence || 'medium',
-              confidenceNum: confidenceToNum[b.confidence] || 0.75,
-              quote: b.quote || b.iqtibos || '',
-              themes: Array.isArray(b.themes) ? b.themes : (Array.isArray(b.mavzular) ? b.mavzular : []),
-              genre: b.genre || b.janr || '',
-              pages: b.pages || b.sahifalar || null,
-              rating: b.rating || b.reyting || null,
-              language: b.language || lang
-            };
-          }
-          return null;
-        }).filter((b) => b && b.title && typeof b.title === 'string' && b.title.trim());
-
+        const books = parseAiSearchBooks(content, lang);
         if (books.length === 0) continue;
-
-        // First save books to DB quickly (parallel), also cache quotes
-        const booksInDb = await Promise.all(
-          books.slice(0, 25).map(async (book) => {
-            try {
-              const aiBook = await getOrCreateAiBook({
-                title: book.title || '',
-                author: book.author || '',
-                year: book.year || null,
-                description: book.description || '',
-                language: book.language || lang
-              });
-              if (aiBook?._id && book.quote) {
-                saveAiQuoteForBook(aiBook._id, book.quote, book.language || lang).catch(() => {});
-              }
-              return { ...book, dbBook: aiBook };
-            } catch {
-              return { ...book, dbBook: null };
-            }
-          })
-        );
-
-        // Fetch covers in the BACKGROUND (don't block the response). Fetching a
-        // cover hits Google Books with several queries per book, which for ~20
-        // books pushes the whole request past its timeout. Instead we return
-        // immediately with whatever cover the DB already has, and update the DB
-        // in the background so covers appear on the next search.
-        booksInDb.forEach((book) => {
-          if (!book.dbBook?._id || book.dbBook?.coverImage) return;
-          fetchBookCover(book.title, book.author)
-            .then((cover) => {
-              if (cover) Book.findByIdAndUpdate(book.dbBook._id, { coverImage: cover }).catch(() => {});
-            })
-            .catch(() => {});
-        });
-
-        return booksInDb.map((book, idx) => {
-          const coverImage = book.dbBook?.coverImage || null;
-
-          return {
-            quoteId: `ai-${Date.now()}-${idx}`,
-            text: book.quote || book.description || '',
-            pageNumber: null,
-            confidence: normalizeConfidence(book.confidenceNum || 0.75, 0.75),
-            score: 0,
-            book: {
-              id: book.dbBook?._id || null,
-              title: book.title || '',
-              titleOriginal: book.titleOriginal || null,
-              titleUz: book.dbBook?.titleUz || null,
-              author: book.author || '',
-              authorUz: book.dbBook?.authorUz || null,
-              language: book.language || lang,
-              year: book.year || null,
-              isbn: book.isbn || null,
-              genre: book.genre || null,
-              pages: book.pages || null,
-              themes: book.themes || [],
-              rating: book.rating || null,
-              coverImage,
-              affiliateLink: null,
-              likes: book.dbBook?.likes || 0
-            },
-            source: 'ai'
-          };
-        });
+        return finalizeAiSearchBooks(books, lang);
       }
 
       const errorText = await res.text().catch(() => '');
@@ -914,6 +917,38 @@ REQUIRED JSON fields for each book:
         console.warn(`AI search model ${model} failed:`, err.message);
       }
       continue;
+    }
+  }
+
+  // ── Groq fallback ──────────────────────────────────────────────────────────
+  // Separate provider + key. If every OpenRouter model failed (bad key, rate
+  // limit, timeout), Groq usually still answers fast.
+  if (GROQ_API_KEY_SEARCH) {
+    for (const gModel of GROQ_SEARCH_MODELS) {
+      try {
+        const ac = new AbortController();
+        const tid = setTimeout(() => ac.abort(), 12000);
+        const res = await fetch(GROQ_URL_SEARCH, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${GROQ_API_KEY_SEARCH}` },
+          body: JSON.stringify({
+            model: gModel,
+            max_tokens: 1500,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userMsg }
+            ]
+          }),
+          signal: ac.signal
+        });
+        clearTimeout(tid);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content || '';
+        const books = parseAiSearchBooks(content, lang);
+        if (books.length === 0) continue;
+        return finalizeAiSearchBooks(books, lang);
+      } catch { continue; }
     }
   }
 
