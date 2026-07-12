@@ -1269,7 +1269,8 @@ async function runSearch(chatId, state, query) {
   const loadMsg = await bot.sendMessage(chatId, t(lang, 'searching'));
   try {
     const effectiveLang = detectLang(query) || lang;
-    const data = await apiSearch(query, effectiveLang, 22000);
+    // AI-only backend search can take up to ~22s, give it headroom.
+    const data = await apiSearch(query, effectiveLang, 25000);
     const results = data.results || [];
 
     if (!results.length) {

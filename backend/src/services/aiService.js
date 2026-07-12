@@ -69,17 +69,18 @@ const GROQ_MODELS = [
   'llama-3.1-8b-instant',      // ultra-fast fallback
 ];
 
-// OpenRouter free model list — try these in order
+// OpenRouter free model list — verified available (July 2026). Ordered by
+// reliability + speed. mistral-7b:free was removed by OpenRouter, don't use it.
 const FREE_MODEL_FALLBACKS = [
   'meta-llama/llama-3.3-70b-instruct:free',
   'meta-llama/llama-3.2-3b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
+  'openai/gpt-oss-20b:free',
 ];
 
 // find-book: 2 models × 7s = 14s max (fast path, Groq fallback after)
 const FIND_BOOK_EXPLAIN_MODELS = [
   'meta-llama/llama-3.3-70b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
+  'openai/gpt-oss-20b:free',
 ];
 
 function modelCandidates() {
