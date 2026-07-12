@@ -596,7 +596,7 @@ function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 const AI_MODELS_FAST = [
   'meta-llama/llama-3.3-70b-instruct:free',
   'meta-llama/llama-3.2-3b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
+  'openai/gpt-oss-20b:free',
 ];
 
 async function tryGroqBot(messages, timeoutMs = 8000) {
