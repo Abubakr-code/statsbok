@@ -9,8 +9,10 @@ async function search(req, res, next) {
     if (!q || !String(q).trim()) {
       return res.status(400).json({ error: 'Query parameter q is required' });
     }
-    const results = await searchQuotesEnhanced(q, lang);
-    res.json({ query: q, count: results.length, results });
+    // ?debug=1 returns a provider trace so we can see which AI path answered.
+    const diag = req.query.debug ? [] : null;
+    const results = await searchQuotesEnhanced(q, lang, diag);
+    res.json({ query: q, count: results.length, results, ...(diag ? { diag } : {}) });
   } catch (err) {
     next(err);
   }

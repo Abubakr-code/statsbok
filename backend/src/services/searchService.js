@@ -814,12 +814,14 @@ async function finalizeAiSearchBooks(books, lang) {
  * AI-powered search using OpenRouter (primary) + Groq (fallback).
  * Uses free AI models — responds in the user's language.
  */
-async function aiSearchBooks(query, lang = 'en') {
-  if (!ENABLE_AI_SEARCH) return [];
+async function aiSearchBooks(query, lang = 'en', diag = null) {
+  const log = (m) => { if (diag) diag.push(m); };
+  if (!ENABLE_AI_SEARCH) { log('ENABLE_AI_SEARCH=false'); return []; }
 
   const apiKey = OPENROUTER_SEARCH_API_KEY;
-  if (!apiKey) {
-    console.warn('OPENROUTER_SEARCH_API_KEY/OPENROUTER_API_KEY not set, skipping AI search');
+  if (!apiKey && !GROQ_API_KEY_SEARCH) {
+    console.warn('No AI key set (OpenRouter/Groq), skipping AI search');
+    log('no AI key at all');
     return [];
   }
 
@@ -860,95 +862,83 @@ REQUIRED JSON fields for each book:
 }`;
 
   const userMsg = `Search for books related to: "${query}". Find 8-12 real books. Respond in ${langName}.`;
-
-  // Only confirmed-working FREE models (verified July 2026). Fast + reliable
-  // first. The 120B nemotron was too slow (>20s) and got cut off, returning
-  // nothing — replaced with faster instruction-tuned models.
-  const FREE_MODEL_FALLBACKS = [
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'openai/gpt-oss-20b:free',
-    'google/gemma-4-31b-it:free',
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userMsg }
   ];
 
-  // Deduplicate models to avoid trying the same one twice
-  const models = [...new Set([OPENROUTER_SEARCH_MODEL, ...FREE_MODEL_FALLBACKS])];
-
-  for (const [mi, model] of models.entries()) {
-    if (isModelCoolingDown(model)) continue; // skip rate-limited model
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s per model
-      const res = await fetch(OPENROUTER_URL, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
-          'X-Title': 'StatBooks'
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 1500,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userMsg }
-          ]
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        const content = data.choices?.[0]?.message?.content || '';
-        const books = parseAiSearchBooks(content, lang);
-        if (books.length === 0) continue;
-        return finalizeAiSearchBooks(books, lang);
-      }
-
-      const errorText = await res.text().catch(() => '');
-      if (res.status === 429) {
-        setCooldown(model); // don't retry for 60s
-      } else {
-        console.warn(`AI search model ${model} returned ${res.status}: ${errorText.slice(0, 120)}`);
-      }
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.warn(`AI search model ${model} failed:`, err.message);
-      }
-      continue;
-    }
-  }
-
-  // ── Groq fallback ──────────────────────────────────────────────────────────
-  // Separate provider + key. If every OpenRouter model failed (bad key, rate
-  // limit, timeout), Groq usually still answers fast.
+  // ── 1) Groq FIRST — fast + reliable (separate provider/key) ────────────────
+  // Free OpenRouter models are slow at generating JSON book lists and often
+  // eat the whole time budget, so we try Groq (1-3s) before them.
   if (GROQ_API_KEY_SEARCH) {
     for (const gModel of GROQ_SEARCH_MODELS) {
       try {
         const ac = new AbortController();
-        const tid = setTimeout(() => ac.abort(), 12000);
+        const tid = setTimeout(() => ac.abort(), 10000);
         const res = await fetch(GROQ_URL_SEARCH, {
           method: 'POST',
           headers: { 'content-type': 'application/json', authorization: `Bearer ${GROQ_API_KEY_SEARCH}` },
-          body: JSON.stringify({
-            model: gModel,
-            max_tokens: 1500,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userMsg }
-            ]
-          }),
+          body: JSON.stringify({ model: gModel, max_tokens: 1500, messages }),
           signal: ac.signal
         });
         clearTimeout(tid);
-        if (!res.ok) continue;
+        if (!res.ok) { log(`groq ${gModel}: HTTP ${res.status}`); continue; }
         const data = await res.json();
         const content = data.choices?.[0]?.message?.content || '';
         const books = parseAiSearchBooks(content, lang);
-        if (books.length === 0) continue;
+        if (books.length === 0) { log(`groq ${gModel}: parsed 0`); continue; }
+        log(`groq ${gModel}: ${books.length} books`);
         return finalizeAiSearchBooks(books, lang);
-      } catch { continue; }
+      } catch (e) { log(`groq ${gModel}: ${e.name === 'AbortError' ? 'timeout' : e.message}`); continue; }
+    }
+  } else {
+    log('groq: no key');
+  }
+
+  // ── 2) OpenRouter free models — fallback (slower) ──────────────────────────
+  if (apiKey) {
+    const FREE_MODEL_FALLBACKS = [
+      'meta-llama/llama-3.3-70b-instruct:free',
+      'openai/gpt-oss-20b:free',
+      'google/gemma-4-31b-it:free',
+    ];
+    const models = [...new Set([OPENROUTER_SEARCH_MODEL, ...FREE_MODEL_FALLBACKS])].slice(0, 3);
+
+    for (const model of models) {
+      if (isModelCoolingDown(model)) { log(`or ${model}: cooldown`); continue; }
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s per model
+        const res = await fetch(OPENROUTER_URL, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${apiKey}`,
+            'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
+            'X-Title': 'StatBooks'
+          },
+          body: JSON.stringify({ model, max_tokens: 1500, messages }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const data = await res.json();
+          const content = data.choices?.[0]?.message?.content || '';
+          const books = parseAiSearchBooks(content, lang);
+          if (books.length === 0) { log(`or ${model}: parsed 0`); continue; }
+          log(`or ${model}: ${books.length} books`);
+          return finalizeAiSearchBooks(books, lang);
+        }
+
+        const errorText = await res.text().catch(() => '');
+        log(`or ${model}: HTTP ${res.status}`);
+        if (res.status === 429) setCooldown(model);
+        else console.warn(`AI search model ${model} returned ${res.status}: ${errorText.slice(0, 120)}`);
+      } catch (err) {
+        log(`or ${model}: ${err.name === 'AbortError' ? 'timeout' : err.message}`);
+        continue;
+      }
     }
   }
 
@@ -1123,7 +1113,7 @@ async function strictDatabaseFallback(raw, lang) {
  * (AI results are still written to the DB in the background purely to attach
  *  stable ids + cover images, but they are NEVER the source of the answer.)
  */
-async function searchQuotesEnhanced(input, lang = 'en') {
+async function searchQuotesEnhanced(input, lang = 'en', diag = null) {
   const raw = (input || '').trim();
   if (!raw) return [];
   const effectiveLang = detectLanguage(raw, lang);
@@ -1131,14 +1121,15 @@ async function searchQuotesEnhanced(input, lang = 'en') {
   const cacheKey = `${raw.toLowerCase()}:${effectiveLang}`;
   const cached = searchCache.get(cacheKey);
   if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
+    if (diag) diag.push('cache hit');
     return cached.results;
   }
 
   if (!ENABLE_AI_SEARCH) return [];
 
-  // Pure AI discovery. 15s per model × up to 3 models, capped at 22s overall
-  // so both the Netlify proxy (26s) and the Telegram bot (24s) get a response.
-  const aiResults = await withTimeout(aiSearchBooks(raw, effectiveLang), 22000);
+  // Pure AI discovery. Groq first (fast), then OpenRouter free models.
+  // Capped at 22s overall so Netlify (26s) and the bot (25s) still get a reply.
+  const aiResults = await withTimeout(aiSearchBooks(raw, effectiveLang, diag), 22000);
   let list = Array.isArray(aiResults) ? aiResults : [];
 
   // Rank by confidence, then quality (cover, popularity, right language).
