@@ -93,7 +93,13 @@ function normalizeCandidate(raw, lang) {
   return {
     title,
     author,
-    year: Number.isFinite(Number(raw.year)) ? Number(raw.year) : null,
+    year:
+      raw.year !== null &&
+      raw.year !== undefined &&
+      raw.year !== '' &&
+      Number.isFinite(Number(raw.year))
+        ? Number(raw.year)
+        : null,
     language: VALID_LANGS.has(raw.language) ? raw.language : lang,
     genre: String(raw.genre || '').trim(),
     reason: String(raw.reason || '').trim(),

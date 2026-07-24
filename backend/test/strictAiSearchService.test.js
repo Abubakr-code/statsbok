@@ -31,6 +31,7 @@ test('quote discovery keeps only one candidate', () => {
   );
   assert.equal(result.intent, 'quote');
   assert.equal(result.books.length, 1);
+  assert.equal(result.books[0].year, null);
 });
 
 test('invalid and unknown candidates are removed', () => {

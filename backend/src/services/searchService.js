@@ -1115,7 +1115,12 @@ async function strictDatabaseFallback(raw, lang) {
 async function searchQuotesEnhanced(input, lang = 'en', diag = null) {
   const raw = (input || '').trim();
   if (!raw) return [];
-  const effectiveLang = detectLanguage(raw, lang);
+  // The UI/bot-selected language is authoritative. Auto-detection previously
+  // changed English/Russian requests to Uzbek and produced wrong-language
+  // titles and explanations.
+  const effectiveLang = ['uz', 'ru', 'en'].includes(lang)
+    ? lang
+    : detectLanguage(raw, 'uz');
 
   const cacheKey = `${raw.toLowerCase()}:${effectiveLang}`;
   const cached = searchCache.get(cacheKey);
