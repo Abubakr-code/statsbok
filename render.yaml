@@ -30,11 +30,11 @@ services:
       - key: OPENROUTER_API_KEY
         sync: false
       - key: OPENROUTER_MODEL
-        value: openrouter/free
+        value: meta-llama/llama-3.3-70b-instruct:free
       - key: OPENROUTER_SEARCH_API_KEY
         sync: false
       - key: OPENROUTER_SEARCH_MODEL
-        value: openrouter/free
+        value: meta-llama/llama-3.3-70b-instruct:free
       - key: OPENROUTER_CHAT_API_KEY
         sync: false
       - key: OPENROUTER_CHAT_MODEL
@@ -43,6 +43,17 @@ services:
         value: meta-llama/llama-3.3-70b-instruct:free
       - key: GROQ_API_KEY
         sync: false
+      # Optional high-quality primary provider. Google AI Studio offers a free
+      # Gemini API tier; when absent the app continues with Groq + OpenRouter.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      # Optional NVIDIA Build/NIM trial fallback (OpenAI-compatible endpoint).
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: NVIDIA_MODEL
+        value: meta/llama-3.1-70b-instruct
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM

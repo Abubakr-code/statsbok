@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import api from '../services/api';
 import { useI18n } from '../i18n';
 import BookPreviewModal from './BookPreviewModal';
+import RichText from './RichText';
 
 function AiBookCard({ book, onOpen }) {
   const t = useI18n((s) => s.t);
@@ -150,7 +151,9 @@ export default function AiBookOracle() {
             {results.reply && (
               <div className="mb-4 flex gap-2">
                 <span className="shrink-0 select-none text-lg" aria-hidden>🤖</span>
-                <p className="text-sm leading-relaxed text-parchment-dim">{results.reply}</p>
+                <div className="text-sm leading-relaxed text-parchment-dim">
+                  <RichText text={results.reply} />
+                </div>
               </div>
             )}
 

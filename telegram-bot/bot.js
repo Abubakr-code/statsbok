@@ -32,16 +32,19 @@ const AI_FREE_MODELS = [
 const AI_PROMPTS = {
   uz: 'You are "StatBooks AI", a warm book assistant for the StatBooks platform. ' +
       'CRITICAL: You MUST reply ONLY in Uzbek (Latin script). Never respond in English or Russian. ' +
+      'NEVER invent book titles, authors, quotes, page numbers, or publication facts. If uncertain, say so clearly instead of guessing. ' +
       'Keep replies short (2-5 sentences), warm and friendly. ' +
       'Bold book titles and author names using <b>HTML tags</b>. ' +
       'If asked something unrelated to books, gently steer back to reading topics.',
   ru: 'You are "StatBooks AI", a warm book assistant for the StatBooks platform. ' +
       'CRITICAL: You MUST reply ONLY in Russian. Never respond in English or Uzbek. ' +
+      'NEVER invent book titles, authors, quotes, page numbers, or publication facts. If uncertain, say so clearly instead of guessing. ' +
       'Keep replies short (2-5 sentences), warm and friendly. ' +
       'Bold book titles and author names using <b>HTML tags</b>. ' +
       'If asked something unrelated to books, gently steer back to reading topics.',
   en: 'You are "StatBooks AI", a warm book assistant for the StatBooks platform. ' +
       'CRITICAL: You MUST reply ONLY in English. Never respond in Uzbek or Russian. ' +
+      'NEVER invent book titles, authors, quotes, page numbers, or publication facts. If uncertain, say so clearly instead of guessing. ' +
       'Keep replies short (2-5 sentences), warm and friendly. ' +
       'Bold book titles and author names using <b>HTML tags</b>. ' +
       'If asked something unrelated to books, gently steer back to reading topics.',
@@ -92,7 +95,7 @@ const MSGS = {
     welcome:        (n) => `📖 <b>Assalomu alaykum, ${n}!</b>\n\nStatBooks — kitob iqtiboslarini topish platformasi.\n\nIqtibos matni, muallif ismi yoki mavzu yozing — darhol topib beraman!\n\n📌 /help — barcha komandalar`,
     howto:          'Qidiruv uchun iqtibos yoki muallif yozing.',
     searching:      '🔍 Qidirilmoqda...',
-    noResults:      (q) => `😔 <b>"${q}"</b> bo\'yicha hech narsa topilmadi.\n\n💡 Boshqacha so\'z bilan urinib ko\'ring.`,
+    noResults:      (q) => `🛡 <b>"${q}"</b> uchun aniq tasdiqlangan manba topilmadi.\n\nTasodifiy kitob ko'rsatilmadi. Iqtibosni uzunroq yozib qayta urinib ko'ring.`,
     rateLimit:      '⏳ Juda ko\'p so\'rov. Bir daqiqa kuting.',
     tooShort:       '✏️ Kamida 2 ta harf kiriting.',
     tooLong:        '✏️ So\'rov 500 ta belgidan qisqa bo\'lsin.',
@@ -163,7 +166,7 @@ const MSGS = {
     welcome:        (n) => `📖 <b>Добро пожаловать, ${n}!</b>\n\nStatBooks — платформа для поиска книжных цитат.\n\nНапишите цитату, имя автора или тему — найду мгновенно!\n\n📌 /help — все команды`,
     howto:          'Введите цитату или автора для поиска.',
     searching:      '🔍 Поиск...',
-    noResults:      (q) => `😔 По запросу <b>"${q}"</b> ничего не найдено.\n\n💡 Попробуйте другие слова.`,
+    noResults:      (q) => `🛡 Для <b>"${q}"</b> не найден подтверждённый источник.\n\nСлучайная книга не показана. Отправьте более длинную цитату.`,
     rateLimit:      '⏳ Слишком много запросов. Подождите минуту.',
     tooShort:       '✏️ Введите минимум 2 символа.',
     tooLong:        '✏️ Запрос не более 500 символов.',
@@ -234,7 +237,7 @@ const MSGS = {
     welcome:        (n) => `📖 <b>Welcome, ${n}!</b>\n\nStatBooks — find any book by its quote.\n\nType a quote, author name, or topic and I'll find it instantly!\n\n📌 /help — all commands`,
     howto:          'Type a quote or author to search.',
     searching:      '🔍 Searching...',
-    noResults:      (q) => `😔 Nothing found for <b>"${q}"</b>.\n\n💡 Try different words.`,
+    noResults:      (q) => `🛡 No verified source was found for <b>"${q}"</b>.\n\nNo random book was shown. Try again with a longer quote.`,
     rateLimit:      '⏳ Too many requests. Wait a minute.',
     tooShort:       '✏️ Enter at least 2 characters.',
     tooLong:        '✏️ Query must be under 500 characters.',

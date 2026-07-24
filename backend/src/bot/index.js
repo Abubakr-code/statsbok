@@ -4,6 +4,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const cron = require('node-cron');
 const fetch = global.fetch.bind(global);
+const aiService = require('../services/aiService');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const TOKEN          = process.env.TELEGRAM_BOT_TOKEN;
@@ -13,28 +14,6 @@ const FRONTEND       = (process.env.FRONTEND_URL || 'https://statbooks.uz').repl
 const MODE           = process.env.BOT_MODE || 'polling';
 const CHANNEL        = process.env.CHANNEL_USERNAME || '@statsbooks';
 const REQUIRE_CHANNEL = process.env.REQUIRE_CHANNEL === 'true';
-
-const OPENROUTER_URL          = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_CHAT_API_KEY = process.env.OPENROUTER_CHAT_API_KEY;
-const OPENROUTER_CHAT_MODEL   = process.env.OPENROUTER_CHAT_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free';
-
-const AI_FREE_MODELS = [
-  OPENROUTER_CHAT_MODEL,
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'openai/gpt-oss-120b:free',
-  'google/gemma-4-31b-it:free',
-  'openai/gpt-oss-20b:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'openrouter/free',
-].filter((v, i, a) => a.indexOf(v) === i);
-
-const AI_SYSTEM_PROMPT =
-  'Sen — "StatBooks AI", kitoblar va adabiyot bo\'yicha ixtisoslashgan yordamchi. ' +
-  'StatBooks platformasi kitob iqtiboslarini topish va kitoblarni kashf etish uchun. ' +
-  'Javoblaringni qisqa (2-5 jumla), issiq va do\'stona uslubda yoz. ' +
-  'Kitob nomlari va muallif ismlarini <b>qalin</b> yoz (HTML formatda). ' +
-  'Foydalanuvchi qaysi tilda yozsa — o\'sha tilda javob ber (o\'zbek, rus yoki ingliz). ' +
-  'Kitoblar bilan bog\'liq bo\'lmagan savollar kelsa, muloyimlik bilan mavzuni kitoblarga qaytargin.';
 
 const PAGE_SIZE = 3;
 const AI_MAX_HISTORY = 14;
@@ -58,7 +37,7 @@ const MSGS = {
     welcome:        (n) => `📖 <b>Assalomu alaykum, ${n}!</b>\n\nStatBooks — kitob iqtiboslarini topish platformasi.\n\nIqtibos matni, muallif ismi yoki mavzu yozing — darhol topib beraman!\n\n📎 <b>PDF kitob</b> yuborsangiz — shaxsiy kutubxonangizga qo‘shaman (avval /link orqali akkauntingizni bog‘lang).\n\n📌 /help — barcha komandalar`,
     howto:          'Qidiruv uchun iqtibos yoki muallif yozing.',
     searching:      '🔍 Qidirilmoqda...',
-    noResults:      (q) => `😔 <b>"${q}"</b> bo\'yicha hech narsa topilmadi.\n\n💡 Boshqacha so\'z bilan urinib ko\'ring.`,
+    noResults:      (q) => `🛡 <b>"${q}"</b> uchun aniq tasdiqlangan manba topilmadi.\n\nTasodifiy kitob ko'rsatilmadi. Iqtibosni uzunroq yozib qayta urinib ko'ring.`,
     rateLimit:      '⏳ Juda ko\'p so\'rov. Bir daqiqa kuting.',
     tooShort:       '✏️ Kamida 2 ta harf kiriting.',
     tooLong:        '✏️ So\'rov 500 ta belgidan qisqa bo\'lsin.',
@@ -129,7 +108,7 @@ const MSGS = {
     welcome:        (n) => `📖 <b>Добро пожаловать, ${n}!</b>\n\nStatBooks — платформа для поиска книжных цитат.\n\nНапишите цитату, имя автора или тему — найду мгновенно!\n\n📎 Пришлите <b>PDF-книгу</b> — добавлю в вашу личную библиотеку (сначала привяжите аккаунт через /link).\n\n📌 /help — все команды`,
     howto:          'Введите цитату или автора для поиска.',
     searching:      '🔍 Поиск...',
-    noResults:      (q) => `😔 По запросу <b>"${q}"</b> ничего не найдено.\n\n💡 Попробуйте другие слова.`,
+    noResults:      (q) => `🛡 Для <b>"${q}"</b> не найден подтверждённый источник.\n\nСлучайная книга не показана. Отправьте более длинную цитату.`,
     rateLimit:      '⏳ Слишком много запросов. Подождите минуту.',
     tooShort:       '✏️ Введите минимум 2 символа.',
     tooLong:        '✏️ Запрос не более 500 символов.',
@@ -200,7 +179,7 @@ const MSGS = {
     welcome:        (n) => `📖 <b>Welcome, ${n}!</b>\n\nStatBooks — find any book by its quote.\n\nType a quote, author name, or topic and I'll find it instantly!\n\n📎 Send a <b>PDF book</b> and I'll add it to your personal library (link your account first via /link).\n\n📌 /help — all commands`,
     howto:          'Type a quote or author to search.',
     searching:      '🔍 Searching...',
-    noResults:      (q) => `😔 Nothing found for <b>"${q}"</b>.\n\n💡 Try different words.`,
+    noResults:      (q) => `🛡 No verified source was found for <b>"${q}"</b>.\n\nNo random book was shown. Try again with a longer quote.`,
     rateLimit:      '⏳ Too many requests. Wait a minute.',
     tooShort:       '✏️ Enter at least 2 characters.',
     tooLong:        '✏️ Query must be under 500 characters.',
@@ -560,82 +539,22 @@ function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── AI chat ───────────────────────────────────────────────────────────────────
 async function callAI(chatId) {
-  if (!OPENROUTER_CHAT_API_KEY) throw new Error('OPENROUTER_CHAT_API_KEY yo\'q');
   const state = getState(chatId);
-  const messages = [
-    { role: 'system', content: AI_SYSTEM_PROMPT },
-    ...state.aiHistory.slice(-AI_MAX_HISTORY)
-  ];
-
-  let lastErr = 'Hech qanday model ishlamadi';
-  for (const model of AI_FREE_MODELS) {
-    try {
-      const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 20000);
-      const res = await fetch(OPENROUTER_URL, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${OPENROUTER_CHAT_API_KEY}`,
-          'HTTP-Referer': FRONTEND,
-          'X-Title': 'StatBooks'
-        },
-        body: JSON.stringify({ model, max_tokens: 700, messages }),
-        signal: controller.signal
-      });
-      clearTimeout(tid);
-      if (res.ok) {
-        const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content || '';
-        if (reply) { state.aiHistory.push({ role: 'assistant', content: reply }); return reply; }
-        lastErr = 'Bo\'sh javob';
-      } else {
-        lastErr = `${res.status}`;
-      }
-    } catch (err) {
-      lastErr = err.message;
-    }
-  }
-  throw new Error(lastErr);
+  const reply = await aiService.chat(
+    state.aiHistory.slice(-AI_MAX_HISTORY),
+    state.lang || 'uz'
+  );
+  state.aiHistory.push({ role: 'assistant', content: reply });
+  return reply.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 }
 
 // One-shot AI call (no history) — used for the "AI insight" button.
-async function aiOneShot(userContent) {
-  if (!OPENROUTER_CHAT_API_KEY) throw new Error('OPENROUTER_CHAT_API_KEY yo\'q');
-  const messages = [
-    { role: 'system', content: AI_SYSTEM_PROMPT },
-    { role: 'user', content: userContent }
-  ];
-  let lastErr = 'AI ishlamadi';
-  for (const model of AI_FREE_MODELS) {
-    try {
-      const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 20000);
-      const res = await fetch(OPENROUTER_URL, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${OPENROUTER_CHAT_API_KEY}`,
-          'HTTP-Referer': FRONTEND,
-          'X-Title': 'StatBooks'
-        },
-        body: JSON.stringify({ model, max_tokens: 500, messages }),
-        signal: controller.signal
-      });
-      clearTimeout(tid);
-      if (res.ok) {
-        const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content || '';
-        if (reply) return reply;
-        lastErr = 'Bo\'sh javob';
-      } else {
-        lastErr = `${res.status}`;
-      }
-    } catch (err) {
-      lastErr = err.message;
-    }
-  }
-  throw new Error(lastErr);
+async function aiOneShot(userContent, lang = 'uz') {
+  const reply = await aiService.chat(
+    [{ role: 'user', content: userContent }],
+    lang
+  );
+  return reply.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 }
 
 // ── Language selection keyboard ───────────────────────────────────────────────
@@ -1084,7 +1003,7 @@ bot.on('callback_query', async (query) => {
       `Kitob: "${book.title || ''}"${book.author ? ` — ${book.author}` : ''}. ` +
       `Iqtibos: "${(item.text || '').slice(0, 500)}". ${langLine}`;
     try {
-      const reply = await aiOneShot(prompt);
+      const reply = await aiOneShot(prompt, lang);
       await bot.deleteMessage(chatId, loadMsg.message_id).catch(() => {});
       await bot.sendMessage(chatId, reply, { parse_mode: 'HTML' }).catch(() =>
         bot.sendMessage(chatId, reply).catch(() => {})

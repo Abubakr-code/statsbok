@@ -1,4 +1,27 @@
 const ai = require('../services/aiService');
+const { strictAiSearch } = require('../services/strictAiSearchService');
+
+function oracleReply(result, lang) {
+  const first = result.results?.[0];
+  if (!first) {
+    const messages = {
+      uz: "Bu manbani yetarli ishonch bilan aniqlay olmadim. Taxminiy yoki uydirma kitob ko'rsatmayman — iqtibosni to'liqroq yuboring.",
+      ru: 'Не удалось определить источник с достаточной уверенностью. Я не буду показывать случайную или выдуманную книгу — пришлите цитату полностью.',
+      en: 'I could not identify the source with enough confidence. I will not show a random or invented book—please send a longer quote.'
+    };
+    return messages[lang] || messages.uz;
+  }
+
+  const title = first.book?.title || '';
+  const author = first.book?.author || '';
+  const confidence = Math.round((first.confidence || 0) * 100);
+  const messages = {
+    uz: `Ikki bosqichli AI tekshiruvi bo'yicha eng aniq manba: **${title}** — ${author}. Ishonch darajasi: ${confidence}%.`,
+    ru: `По результатам двухэтапной проверки AI наиболее точный источник: **${title}** — ${author}. Уверенность: ${confidence}%.`,
+    en: `After two-stage AI verification, the most likely source is **${title}** by ${author}. Confidence: ${confidence}%.`
+  };
+  return messages[lang] || messages.uz;
+}
 
 async function recommend(req, res, next) {
   try {
@@ -39,7 +62,7 @@ async function chat(req, res, next) {
   }
 }
 
-// Book Oracle — pure AI, no database lookup at all
+// Book Oracle — strict two-stage AI verification, no database lookup.
 async function findBook(req, res, next) {
   try {
     const { question, messages, lang } = req.body;
@@ -47,8 +70,24 @@ async function findBook(req, res, next) {
       ? messages[messages.length - 1].content : '');
     if (!q || !String(q).trim()) return res.status(400).json({ error: 'question is required' });
 
-    const result = await ai.findBookForQuestion(q, messages || [], lang || 'uz');
-    res.json(result);
+    const safeLang = ['uz', 'ru', 'en'].includes(lang) ? lang : 'uz';
+    const result = await strictAiSearch(q, safeLang);
+    const books = (result.results || []).map((item) => ({
+      id: null,
+      title: item.book?.title || '',
+      author: item.book?.author || '',
+      page: null,
+      reason: item.text || '',
+      coverImage: null,
+      affiliateLink: null,
+      confidence: item.confidence
+    }));
+    res.json({
+      reply: oracleReply(result, safeLang),
+      books,
+      status: result.status,
+      intent: result.intent
+    });
   } catch (err) {
     return res.status(503).json({ reply: err.message, books: [] });
   }

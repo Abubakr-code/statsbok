@@ -45,6 +45,7 @@ function BookResultCard({ result, query, expanded, onToggle, onPreview }) {
   const [isLiked, setIsLiked] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
+  const isAiResult = String(source || '').startsWith('ai');
 
   const normalizedConfidence = normalizeConfidence(confidence, 0.75);
   const confidencePct = confidencePercent(confidence, 0.75);
@@ -152,9 +153,9 @@ function BookResultCard({ result, query, expanded, onToggle, onPreview }) {
 
           <span className="text-xs text-parchment-faint">{t('search.match')}: {confidencePct}%</span>
 
-          {source === 'ai' && (
+          {isAiResult && (
             <span className="rounded-full bg-purple-900/50 px-2 py-0.5 text-xs text-purple-200">
-              AI
+              AI ✓
             </span>
           )}
 
@@ -189,7 +190,7 @@ function BookResultCard({ result, query, expanded, onToggle, onPreview }) {
 
             <SaveButton
               quoteId={quoteId}
-              quoteData={source === 'ai' ? { text, book, confidence } : undefined}
+              quoteData={isAiResult ? { text, book, confidence } : undefined}
               className="px-4 py-2 text-sm"
             />
 
@@ -244,6 +245,7 @@ function BookGridResult({ result, query, onPreview }) {
   const [imgError, setImgError] = useState(false);
   const normalizedConfidence = normalizeConfidence(confidence, 0.75);
   const confidencePct = confidencePercent(confidence, 0.75);
+  const isAiResult = String(source || '').startsWith('ai');
 
   return (
     <div className="card animate-fade-in flex flex-col group cursor-pointer hover:border-amber/30 transition-all duration-200"
@@ -265,9 +267,9 @@ function BookGridResult({ result, query, onPreview }) {
             </svg>
           </div>
         )}
-        {source === 'ai' && (
+        {isAiResult && (
           <span className="absolute top-2 right-2 rounded-full bg-purple-900/70 px-2 py-0.5 text-xs text-purple-200">
-            AI
+            AI ✓
           </span>
         )}
       </div>

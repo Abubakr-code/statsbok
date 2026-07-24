@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "test": "node --test",
     "ingest:gutenberg": "node src/services/ingestionService.js gutenberg",
     "ingest:google": "node src/services/ingestionService.js google"
   },
