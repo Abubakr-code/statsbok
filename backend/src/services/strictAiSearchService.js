@@ -240,7 +240,8 @@ async function callGemini(messages, timeoutMs = 9000, useGoogleSearch = false) {
         generationConfig: {
           temperature: 0,
           maxOutputTokens: 900,
-          responseMimeType: 'application/json'
+          responseMimeType: 'application/json',
+          thinkingConfig: { thinkingLevel: 'minimal' }
         }
       })
     },
