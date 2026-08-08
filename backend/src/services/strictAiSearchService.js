@@ -305,9 +305,9 @@ async function discover(query, lang, hintedIntent, diag) {
   const messages = discoveryPrompt(query, lang, hintedIntent);
   const groundWithSearch = hintedIntent === 'quote';
   const providers = [
-    () => callGemini(messages, 7000, groundWithSearch),
-    () => callNvidia(messages, 7000),
     () => callGroq(messages, GROQ_PRIMARY_MODEL, 7000),
+    () => callGemini(messages, 13000, groundWithSearch),
+    () => callNvidia(messages, 7000),
     () => callOpenRouter(messages, 7000)
   ];
 
@@ -335,7 +335,7 @@ async function verify(query, lang, discovery, diag) {
   // same provider can repeat the same hallucination, especially for obscure
   // or fabricated quotes.
   const providers = [
-    ['gemini', () => callGemini(messages, 7000, groundWithSearch)],
+    ['gemini', () => callGemini(messages, 13000, groundWithSearch)],
     ['nvidia', () => callNvidia(messages, 7000)],
     ['openrouter', () => callOpenRouter(messages, 7000)],
     ['groq', () => callGroq(messages, GROQ_VERIFY_MODEL, 7000)]
