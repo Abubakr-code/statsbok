@@ -30,17 +30,17 @@ services:
       - key: OPENROUTER_API_KEY
         sync: false
       - key: OPENROUTER_MODEL
-        value: meta-llama/llama-3.3-70b-instruct:free
+        value: google/gemma-4-31b-it:free
       - key: OPENROUTER_SEARCH_API_KEY
         sync: false
       - key: OPENROUTER_SEARCH_MODEL
-        value: meta-llama/llama-3.3-70b-instruct:free
+        value: google/gemma-4-31b-it:free
       - key: OPENROUTER_CHAT_API_KEY
         sync: false
       - key: OPENROUTER_CHAT_MODEL
-        value: meta-llama/llama-3.3-70b-instruct:free
+        value: google/gemma-4-31b-it:free
       - key: OPENROUTER_FIND_BOOK_MODEL
-        value: meta-llama/llama-3.3-70b-instruct:free
+        value: google/gemma-4-31b-it:free
       - key: GROQ_API_KEY
         sync: false
       # Optional high-quality primary provider. Google AI Studio offers a free

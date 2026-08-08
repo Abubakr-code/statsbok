@@ -20,12 +20,15 @@ const GROQ_VERIFY_MODEL = process.env.GROQ_VERIFY_MODEL || 'llama-3.1-8b-instant
 const configuredOpenRouterModel =
   process.env.OPENROUTER_SEARCH_MODEL ||
   process.env.OPENROUTER_MODEL ||
-  'meta-llama/llama-3.3-70b-instruct:free';
-// openrouter/free can route to unpredictable reasoning-only or weak models.
-const OPENROUTER_MODEL =
-  configuredOpenRouterModel === 'openrouter/free'
-    ? 'meta-llama/llama-3.3-70b-instruct:free'
-    : configuredOpenRouterModel;
+  'google/gemma-4-31b-it:free';
+const REMOVED_OPENROUTER_MODELS = new Set([
+  'openrouter/free',
+  'deepseek/deepseek-chat-v3-0324:free',
+  'meta-llama/llama-3.3-70b-instruct:free'
+]);
+const OPENROUTER_MODEL = REMOVED_OPENROUTER_MODELS.has(configuredOpenRouterModel)
+  ? 'google/gemma-4-31b-it:free'
+  : configuredOpenRouterModel;
 
 const VALID_INTENTS = new Set(['quote', 'author', 'title', 'topic']);
 const VALID_LANGS = new Set(['uz', 'ru', 'en']);
