@@ -330,14 +330,15 @@ async function verify(query, lang, discovery, diag) {
   const messages = verificationPrompt(query, lang, discovery);
   const groundWithSearch = discovery.intent === 'quote' || discovery.intent === 'title';
 
-  // Prefer a genuinely different provider. Groq uses a second model when it
-  // was also the discovery provider.
+  // A provider must never verify its own candidate. Different models from the
+  // same provider can repeat the same hallucination, especially for obscure
+  // or fabricated quotes.
   const providers = [
     ['gemini', () => callGemini(messages, 7000, groundWithSearch)],
     ['nvidia', () => callNvidia(messages, 7000)],
     ['openrouter', () => callOpenRouter(messages, 7000)],
     ['groq', () => callGroq(messages, GROQ_VERIFY_MODEL, 7000)]
-  ].filter(([name]) => name !== discovery.provider || name === 'groq');
+  ].filter(([name]) => name !== discovery.provider);
 
   for (const [, provider] of providers) {
     const response = await provider();
