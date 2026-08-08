@@ -13,7 +13,8 @@ const OPENROUTER_API_KEY =
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+const GEMINI_ENABLE_SEARCH = String(process.env.GEMINI_ENABLE_SEARCH || '').toLowerCase() === 'true';
 const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct';
 const GROQ_PRIMARY_MODEL = process.env.GROQ_SEARCH_MODEL || 'llama-3.3-70b-versatile';
 const GROQ_VERIFY_MODEL = process.env.GROQ_VERIFY_MODEL || 'llama-3.1-8b-instant';
@@ -235,7 +236,7 @@ async function callGemini(messages, timeoutMs = 9000, useGoogleSearch = false) {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents: [{ role: 'user', parts: [{ text: user }] }],
-        ...(useGoogleSearch ? { tools: [{ google_search: {} }] } : {}),
+        ...(useGoogleSearch && GEMINI_ENABLE_SEARCH ? { tools: [{ google_search: {} }] } : {}),
         generationConfig: {
           temperature: 0,
           maxOutputTokens: 900,

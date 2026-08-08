@@ -48,7 +48,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.5-flash
       # Optional NVIDIA Build/NIM trial fallback (OpenAI-compatible endpoint).
       - key: NVIDIA_API_KEY
         sync: false
