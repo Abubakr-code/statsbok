@@ -17,7 +17,7 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 const GEMINI_ENABLE_SEARCH = String(process.env.GEMINI_ENABLE_SEARCH || '').toLowerCase() === 'true';
 const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct';
 const GROQ_PRIMARY_MODEL = process.env.GROQ_SEARCH_MODEL || 'llama-3.3-70b-versatile';
-const GROQ_VERIFY_MODEL = process.env.GROQ_VERIFY_MODEL || 'llama-3.1-8b-instant';
+const GROQ_VERIFY_MODEL = process.env.GROQ_VERIFY_MODEL || 'llama-3.3-70b-versatile';
 const configuredOpenRouterModel =
   process.env.OPENROUTER_SEARCH_MODEL ||
   process.env.OPENROUTER_MODEL ||
@@ -306,8 +306,8 @@ async function discover(query, lang, hintedIntent, diag) {
   const messages = discoveryPrompt(query, lang, hintedIntent);
   const groundWithSearch = hintedIntent === 'quote';
   const providers = [
-    () => callGroq(messages, GROQ_PRIMARY_MODEL, 7000),
     () => callGemini(messages, 13000, groundWithSearch),
+    () => callGroq(messages, GROQ_PRIMARY_MODEL, 7000),
     () => callNvidia(messages, 7000),
     () => callOpenRouter(messages, 7000)
   ];
