@@ -56,10 +56,16 @@ function normalizeKey(value) {
     .trim();
 }
 
+function normalizeWorkTitle(value) {
+  return normalizeKey(value)
+    .replace(/\b(dostoni|doston|she ri|poem|poema|roman|novel|kitobi|asari|поэма|роман|стихотворение)\b$/i, '')
+    .trim();
+}
+
 function sameBook(a, b) {
   if (!a || !b) return false;
   return (
-    normalizeKey(a.title) === normalizeKey(b.title) &&
+    normalizeWorkTitle(a.title) === normalizeWorkTitle(b.title) &&
     normalizeKey(a.author) === normalizeKey(b.author)
   );
 }
@@ -326,36 +332,35 @@ async function verify(query, lang, discovery, diag) {
   const providers = [
     ['gemini', () => callGemini(messages, 7000, groundWithSearch)],
     ['nvidia', () => callNvidia(messages, 7000)],
-    ['groq', () => callGroq(messages, GROQ_VERIFY_MODEL, 7000)],
-    ['openrouter', () => callOpenRouter(messages, 7000)]
+    ['openrouter', () => callOpenRouter(messages, 7000)],
+    ['groq', () => callGroq(messages, GROQ_VERIFY_MODEL, 7000)]
   ].filter(([name]) => name !== discovery.provider || name === 'groq');
 
-  let verification = null;
   for (const [, provider] of providers) {
     const response = await provider();
     if (response.error === 'no_key') continue;
     if (diag) diag.push(`${response.provider}: ${response.value ? 'verification_ok' : response.error || 'invalid_json'}`);
     if (response.value) {
-      verification = response.value;
-      break;
+      const approved = Array.isArray(response.value.approved) ? response.value.approved : [];
+      const minimumCandidateConfidence =
+        discovery.intent === 'quote' || discovery.intent === 'title' ? 0.9 : 0.75;
+      const matched = discovery.books.flatMap((candidate) => {
+        if (candidate.confidence < minimumCandidateConfidence) return [];
+        const match = approved.find((item) =>
+          Number(item?.confidence) >= 0.9 &&
+          sameBook(candidate, item)
+        );
+        if (!match) return [];
+        return [{
+          ...candidate,
+          confidence: Math.min(candidate.confidence, Number(match.confidence))
+        }];
+      });
+      if (matched.length) return matched;
+      if (diag) diag.push(`${response.provider}: verification_rejected`);
     }
   }
-
-  const approved = Array.isArray(verification?.approved) ? verification.approved : [];
-  const minimumCandidateConfidence =
-    discovery.intent === 'quote' || discovery.intent === 'title' ? 0.9 : 0.75;
-  return discovery.books.flatMap((candidate) => {
-    if (candidate.confidence < minimumCandidateConfidence) return [];
-    const match = approved.find((item) =>
-      Number(item?.confidence) >= 0.9 &&
-      sameBook(candidate, item)
-    );
-    if (!match) return [];
-    return [{
-      ...candidate,
-      confidence: Math.min(candidate.confidence, Number(match.confidence))
-    }];
-  });
+  return [];
 }
 
 function formatResults(books, intent, lang) {

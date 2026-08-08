@@ -65,4 +65,11 @@ test('verification requires exact normalized title and author agreement', () => 
     ),
     false
   );
+  assert.equal(
+    sameBook(
+      { title: 'Nido', author: 'Erkin Vohidov' },
+      { title: 'Nido dostoni', author: 'Erkin Vohidov' }
+    ),
+    true
+  );
 });
