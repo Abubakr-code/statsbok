@@ -42,9 +42,9 @@ const dict = {
     'home.stats.booksLabel': 'Kitoblar',
 
     'search.results.for': 'Natijalar: “{q}”',
-    'search.empty': 'AI bu manbani yetarli ishonch bilan aniqlay olmadi.',
+    'search.empty': 'Kitob aniqlanmadi.',
     'search.emptyOracle': "Tasodifiy kitob ko'rsatmaslik uchun noaniq natija yashirildi. Iqtibosni uzunroq va to'liqroq yozib qayta urinib ko'ring.",
-    'search.emptyOracleBtn': '\U0001f52e Kitob Oracle bilan aniqlash \u2192',
+    'search.emptyOracleBtn': '🔮 Kitob Oracle bilan aniqlash →',
     'search.match': 'Moslik',
     'search.preview': 'Kitobni ko‘rish',
     'search.buy': 'Kitobni sotib olish',
@@ -146,7 +146,7 @@ const dict = {
     'ai.oracle.placeholder': 'Masalan: O\'rta asrlar tarixi, Navoiy she\'rlari...',
     'ai.oracle.btn': 'Savol ber',
     'ai.oracle.chips': "O'rta asrlar tarixi 📜|Navoiy she'rlari 🌹|Milliy ozodlik 🏴|Falsafa va hayot 🧠",
-    'ai.oracle.noResult': "Aniq tasdiqlangan kitob topilmadi — AI taxminiy kitob ko'rsatmaydi",
+    'ai.oracle.noResult': 'Kitob aniqlanmadi',
     'ai.oracle.back': 'Yangi savol berish',
     'ai.oracle.label': 'Kitob Oracle',
 
@@ -286,7 +286,7 @@ const dict = {
     'home.stats.booksLabel': 'Books',
 
     'search.results.for': 'Results for “{q}”',
-    'search.empty': 'AI could not identify this source with enough confidence.',
+    'search.empty': 'Book not identified.',
     'search.emptyOracle': 'The uncertain result was hidden instead of showing a random book. Try again with a longer, complete quote.',
     'search.emptyOracleBtn': '🔮 Identify with Book Oracle →',
     'search.match': 'Match',
@@ -390,7 +390,7 @@ const dict = {
     'ai.oracle.placeholder': 'e.g. Middle Ages history, Napoleon\'s campaigns...',
     'ai.oracle.btn': 'Ask AI',
     'ai.oracle.chips': 'Middle Ages history 📜|Napoleon campaigns 🏴|Philosophy of life 🧠|Ancient empires ⚔️',
-    'ai.oracle.noResult': 'No book was verified with enough confidence—AI will not show a guess',
+    'ai.oracle.noResult': 'Book not identified',
     'ai.oracle.back': 'Ask another question',
     'ai.oracle.label': 'Book Oracle',
 
@@ -530,7 +530,7 @@ const dict = {
     'home.stats.booksLabel': 'Книги',
 
     'search.results.for': 'Результаты по «{q}»',
-    'search.empty': 'AI не смог определить источник с достаточной уверенностью.',
+    'search.empty': 'Книга не определена.',
     'search.emptyOracle': 'Неуверенный результат скрыт, чтобы не показывать случайную книгу. Попробуйте отправить более длинную и полную цитату.',
     'search.emptyOracleBtn': '🔮 Определить через Книжный Оракул →',
     'search.match': 'Совпадение',
@@ -635,7 +635,7 @@ const dict = {
     'ai.oracle.placeholder': 'напр. История средних веков, походы Наполеона...',
     'ai.oracle.btn': 'Спросить',
     'ai.oracle.chips': 'История Средневековья 📜|Походы Наполеона 🏴|Философия жизни 🧠|Древние империи ⚔️',
-    'ai.oracle.noResult': 'Книга не подтверждена с достаточной уверенностью — AI не показывает догадки',
+    'ai.oracle.noResult': 'Книга не определена',
     'ai.oracle.back': 'Задать другой вопрос',
     'ai.oracle.label': 'Книжный Оракул',
 

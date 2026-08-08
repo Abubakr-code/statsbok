@@ -134,8 +134,9 @@ function discoveryPrompt(query, lang, hintedIntent) {
         `The response language is ${languageName(lang)}. ` +
         `Never invent a book, author, quote source, year, translation, or title. ` +
         `If evidence is insufficient, return an empty books array. Guessing is a failure. ` +
+        `Before searching, silently restore likely apostrophes, punctuation, transliteration, and minor spelling mistakes in the user's quote. ` +
         `Classify intent as quote, author, title, or topic. The heuristic hint is "${hintedIntent}". ` +
-        `For quote intent: return exactly ONE book only when you know the exact source with high certainty; otherwise return none. ` +
+        `For quote intent: identify the exact literary work (book, poem, story, play, or doston) and its author. Return exactly ONE source only when you know it with high certainty; otherwise return none. ` +
         `For author intent: return only books actually written by that author; never add similar authors. ` +
         `For title intent: return only the exact real book. ` +
         `For topic intent: return at most 5 well-established real books; never fill a quota. ` +
@@ -305,10 +306,11 @@ async function discover(query, lang, hintedIntent, diag) {
     if (response.error === 'no_key') continue;
     if (diag) diag.push(`${response.provider}: ${response.value ? 'discovery_ok' : response.error || 'invalid_json'}`);
     if (response.value) {
-      return {
-        ...normalizeDiscovery(response.value, lang, hintedIntent),
-        provider: response.provider
-      };
+      const normalized = normalizeDiscovery(response.value, lang, hintedIntent);
+      if (normalized.books.length > 0) {
+        return { ...normalized, provider: response.provider };
+      }
+      if (diag) diag.push(`${response.provider}: discovery_empty`);
     }
   }
   return { intent: hintedIntent === 'quote' ? 'quote' : 'topic', books: [], provider: null };

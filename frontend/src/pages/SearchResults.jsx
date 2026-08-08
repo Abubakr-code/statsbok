@@ -378,20 +378,9 @@ export default function SearchResults() {
       )}
 
       {!loading && !error && results.length === 0 && q && (
-        <div className="py-12 text-center space-y-5">
+        <div className="py-12 text-center">
           <div className="text-5xl">🔍</div>
-          <div>
-            <p className="text-lg font-medium text-parchment">{t('search.empty')}</p>
-            <p className="mt-2 text-sm text-parchment-dim max-w-md mx-auto leading-relaxed">
-              {t('search.emptyOracle')}
-            </p>
-          </div>
-          <a
-            href="/"
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 px-6 py-3 text-sm font-semibold text-ink-900 shadow-lg shadow-amber/20 transition hover:from-amber-500 hover:to-amber-400"
-          >
-            {t('search.emptyOracleBtn')}
-          </a>
+          <p className="mt-4 text-lg font-medium text-parchment">{t('search.empty')}</p>
         </div>
       )}
 
